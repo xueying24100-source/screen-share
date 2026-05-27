@@ -1,0 +1,38 @@
+# 构建产物
+build/
+
+# IDE 文件
+.vscode/
+.idea/
+*.user
+*.pro.user
+CMakeLists.txt.user
+
+# 编译产物
+*.o
+*.obj
+*.exe
+*.dll
+*.dylib
+*.app
+*.dmg
+
+# CMake 缓存
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Qt 生成文件
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*.ts.auto
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# md文件
+.md
+!README.md

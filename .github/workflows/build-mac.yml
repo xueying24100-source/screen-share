@@ -1,0 +1,86 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean build directory
+        run: rm -rf build
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.3'
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Deploy macOS app bundle
+        run: macdeployqt build/screenShare.app -verbose=2
+
+      - name: Package as zip
+        run: |
+          cd build
+          zip -r ../screenShare-macOS.zip screenShare.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenShare-macOS
+          path: screenShare-macOS.zip
+          retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean build directory
+        run: Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.3'
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Find exe location
+        id: find_exe
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path build -Recurse -Filter "screenShare.exe" | Select-Object -First 1
+          if (-not $exe) { Write-Error "screenShare.exe not found"; exit 1 }
+          echo "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+          echo "exe_dir=$($exe.DirectoryName)" >> $env:GITHUB_OUTPUT
+          Write-Host "Found exe: $($exe.FullName)"
+
+      - name: Deploy Windows executable
+        run: windeployqt "${{ steps.find_exe.outputs.exe_path }}" --release
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenShare-Windows
+          path: ${{ steps.find_exe.outputs.exe_dir }}/**
+          retention-days: 30
