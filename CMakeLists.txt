@@ -15,6 +15,7 @@ set(SOURCES
     annotationoverlay.cpp
     annotationwindow.cpp
     screencapturer.cpp
+    sourceenumerator.cpp
     audiocapturer.cpp
     audioplayer.cpp
     sender.cpp
@@ -25,6 +26,7 @@ set(HEADERS
     annotationoverlay.h
     annotationwindow.h
     screencapturer.h
+    sourceenumerator.h
     audiocapturer.h
     audioplayer.h
     sender.h
@@ -43,5 +45,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi)
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32)
 endif()
