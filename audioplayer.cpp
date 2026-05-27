@@ -21,6 +21,11 @@ QAudioFormat AudioPlayer::defaultFormat() const
 
 void AudioPlayer::start()
 {
+    start(defaultFormat());
+}
+
+void AudioPlayer::start(const QAudioFormat& format)
+{
     if (m_running) {
         return;
     }
@@ -31,9 +36,8 @@ void AudioPlayer::start()
         return;
     }
 
-    const QAudioFormat format = defaultFormat();
     if (!outputDevice.isFormatSupported(format)) {
-        emit playerError("Default audio output does not support 16kHz mono 16-bit PCM");
+        emit playerError("Default audio output does not support requested audio format");
         return;
     }
 

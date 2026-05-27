@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class QPushButton;
+class QCheckBox;
 
 class ShareToolbar : public QWidget
 {
@@ -15,12 +16,14 @@ public:
     void setAnnotationEnabled(bool enabled);
     void setMicMuted(bool muted);
     void setSystemAudioEnabled(bool enabled);
+    void setLocalPlaybackEnabled(bool enabled);
 
 signals:
     void pauseToggled(bool paused);
     void annotationToggled(bool enabled);
     void micMuteToggled(bool muted);
     void systemAudioToggled(bool enabled);
+    void localPlaybackToggled(bool enabled);
     void backRequested();
     void stopRequested();
 
@@ -37,6 +40,7 @@ private:
     QPushButton* m_annotationButton{nullptr};
     QPushButton* m_micButton{nullptr};
     QPushButton* m_systemAudioButton{nullptr};
+    QCheckBox* m_localPlaybackCheck{nullptr};
     QPushButton* m_backButton{nullptr};
     QPushButton* m_stopButton{nullptr};
 
