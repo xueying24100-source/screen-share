@@ -153,11 +153,13 @@ QImage AnnotationOverlay::renderAnnotationsToImage(const QSize& targetSize) cons
     QImage image(targetSize, QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
-    QPainter painter(&image);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setRenderHint(QPainter::TextAntialiasing, true);
-    painter.scale(targetSize.width() / double(width()), targetSize.height() / double(height()));
-    paintAnnotations(painter);
+    {
+        QPainter painter(&image);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setRenderHint(QPainter::TextAntialiasing, true);
+        painter.scale(targetSize.width() / double(width()), targetSize.height() / double(height()));
+        paintAnnotations(painter);
+    }
     return image;
 }
 

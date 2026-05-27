@@ -87,6 +87,7 @@ private:
     int          m_wgcMinUpdateIntervalMs{0};
     qint64       m_statsWindowStartMs{0};
     int          m_statsWindowFrames{0};
+    bool         m_wgcFallbackLoggedForSession{false};
 
 #ifdef Q_OS_WIN
     Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;

@@ -114,23 +114,11 @@ public slots:
     void stop()
     {
         if (!m_running) {
-            cleanup();
-            if (m_comInitialized) {
-                CoUninitialize();
-                m_comInitialized = false;
-            }
             return;
         }
         m_running = false;
-        killTimer(m_timer.timerId());
-
-        if (m_audioClient) {
-            m_audioClient->Stop();
-        }
-
-        if (m_mmcssHandle) {
-            AvRevertMmThreadCharacteristics(m_mmcssHandle);
-            m_mmcssHandle = nullptr;
+        if (m_timer.isActive()) {
+            m_timer.stop();
         }
 
         cleanup();
@@ -195,6 +183,16 @@ protected:
 private:
     void cleanup()
     {
+        if (m_timer.isActive()) {
+            m_timer.stop();
+        }
+        if (m_audioClient) {
+            m_audioClient->Stop();
+        }
+        if (m_mmcssHandle) {
+            AvRevertMmThreadCharacteristics(m_mmcssHandle);
+            m_mmcssHandle = nullptr;
+        }
         if (m_mixFormat) {
             CoTaskMemFree(m_mixFormat);
             m_mixFormat = nullptr;
@@ -274,6 +272,9 @@ void SystemAudioCapturer::startWorker()
     m_worker->moveToThread(&m_thread);
 
     connect(&m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
+    connect(m_worker, &QObject::destroyed, this, [this]() {
+        m_worker = nullptr;
+    });
     connect(m_worker, &SystemAudioCapturerWorker::audioReady, this, &SystemAudioCapturer::systemAudioDataReady);
     connect(m_worker, &SystemAudioCapturerWorker::error, this, &SystemAudioCapturer::captureError);
 
@@ -287,7 +288,13 @@ void SystemAudioCapturer::stopWorker()
         return;
     }
 
-    QMetaObject::invokeMethod(m_worker, "stop", Qt::BlockingQueuedConnection);
+    SystemAudioCapturerWorker* worker = m_worker.data();
+    if (!worker) {
+        m_worker = nullptr;
+        return;
+    }
+
+    QMetaObject::invokeMethod(worker, "stop", Qt::BlockingQueuedConnection);
     m_thread.quit();
     m_thread.wait();
     m_worker = nullptr;
