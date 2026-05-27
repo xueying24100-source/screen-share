@@ -555,9 +555,11 @@ QImage MeetingMainWindow::composeFrameWithAnnotations(const QImage& frame)
     }
 
     QImage composed = frame.copy();
-    QPainter painter(&composed);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter.drawImage(0, 0, m_annotationLayerCache);
+    {
+        QPainter painter(&composed);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter.drawImage(0, 0, m_annotationLayerCache);
+    }
     return composed;
 }
 

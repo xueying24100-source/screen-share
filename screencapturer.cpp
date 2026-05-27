@@ -107,6 +107,7 @@ void ScreenCapturer::startWindow(quintptr windowId, int fps)
 #endif
     m_captureMode = CaptureMode::Window;
     m_windowHandle = windowId;
+    m_wgcFallbackLoggedForSession = false;
     m_preserveModeForStart = true;
     start(fps);
 }
@@ -129,6 +130,7 @@ void ScreenCapturer::stop()
     m_state = CaptureState::Stopped;
     m_statsWindowStartMs = 0;
     m_statsWindowFrames = 0;
+    m_wgcFallbackLoggedForSession = false;
     qDebug() << "[ScreenCapturer] stopped";
 }
 
@@ -182,6 +184,10 @@ void ScreenCapturer::captureFrame()
                 if (!m_wgcBackend->start(hwnd)) {
                     emit captureError(QStringLiteral("WGC 启动失败，已降级到 GDI 捕获"));
                     qDebug() << "[ScreenCapturer] WGC start failed, fallback to GDI";
+                    if (!m_wgcFallbackLoggedForSession) {
+                        qDebug() << "[ScreenCapturer] WGC unavailable for this window, using GrabWindow; expect low fps on large windows";
+                        m_wgcFallbackLoggedForSession = true;
+                    }
                     m_wgcFailed = true;
                 } else {
                     m_state = CaptureState::Running;
@@ -200,6 +206,10 @@ void ScreenCapturer::captureFrame()
                         if (m_blackFrameCount >= m_blackFrameThreshold) {
                             emit captureError(QStringLiteral("WGC 连续黑帧，已降级到 GDI 捕获"));
                             qDebug() << "[ScreenCapturer] WGC consecutive black frames, fallback to GDI";
+                            if (!m_wgcFallbackLoggedForSession) {
+                                qDebug() << "[ScreenCapturer] WGC unavailable for this window, using GrabWindow; expect low fps on large windows";
+                                m_wgcFallbackLoggedForSession = true;
+                            }
                             m_wgcFailed = true;
                             m_wgcBackend->stop();
                             m_blackFrameCount = 0;
@@ -234,6 +244,10 @@ void ScreenCapturer::captureFrame()
         }
 
         // WGC 不可用或已失败，走 GDI fallback
+        if (!m_wgcFallbackLoggedForSession) {
+            qDebug() << "[ScreenCapturer] WGC unavailable for this window, using GrabWindow; expect low fps on large windows";
+            m_wgcFallbackLoggedForSession = true;
+        }
         captureWithGdiWindow();
         return;
     }

@@ -133,9 +133,11 @@ QPixmap placeholderThumbnail(const QString& text)
 {
     QPixmap pix(kThumbW, kThumbH);
     pix.fill(QColor("#10141f"));
-    QPainter painter(&pix);
-    painter.setPen(QColor("#7f8796"));
-    painter.drawText(pix.rect(), Qt::AlignCenter, text);
+    {
+        QPainter painter(&pix);
+        painter.setPen(QColor("#7f8796"));
+        painter.drawText(pix.rect(), Qt::AlignCenter, text);
+    }
     return pix;
 }
 

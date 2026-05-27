@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
 #include <QThread>
 
 class SystemAudioCapturerWorker;
@@ -25,5 +26,5 @@ private:
 
     bool m_enabled{false};
     QThread m_thread;
-    SystemAudioCapturerWorker* m_worker{nullptr};
+    QPointer<SystemAudioCapturerWorker> m_worker;
 };
