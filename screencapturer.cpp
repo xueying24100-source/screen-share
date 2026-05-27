@@ -1,4 +1,5 @@
 #include "screencapturer.h"
+#include "wgcwindowcapturebackend.h"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -24,6 +25,9 @@ ScreenCapturer::ScreenCapturer(QObject* parent)
     , m_timer(new QTimer(this))
 {
     connect(m_timer, &QTimer::timeout, this, &ScreenCapturer::captureFrame);
+#ifdef Q_OS_WIN
+    m_wgcBackend = std::make_unique<WgcWindowCaptureBackend>();
+#endif
 }
 
 ScreenCapturer::~ScreenCapturer()
@@ -74,12 +78,83 @@ void ScreenCapturer::stop()
     if (!m_running) return;
     m_timer->stop();
     m_running = false;
+#ifdef Q_OS_WIN
+    if (m_wgcBackend) m_wgcBackend->stop();
+#endif
+    m_wgcFailed = false;
+    m_blackFrameCount = 0;
+    m_frameIndex = 0;
+    m_state = CaptureState::Stopped;
     qDebug() << "[ScreenCapturer] stopped";
 }
 
 void ScreenCapturer::captureFrame()
 {
 #ifdef Q_OS_WIN
+    if (m_captureMode == CaptureMode::Window) {
+        // 窗口关闭检测
+        HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
+        if (!IsWindow(hwnd)) {
+            emit captureError("Window closed");
+            stop();
+            return;
+        }
+
+        // WGC 主路径
+        if (!m_wgcFailed && WgcWindowCaptureBackend::isSupported()) {
+            if (!m_wgcBackend->isRunning()) {
+                m_state = CaptureState::Starting;
+                if (!m_wgcBackend->start(hwnd)) {
+                    qDebug() << "[ScreenCapturer] WGC start failed, fallback to GDI";
+                    m_wgcFailed = true;
+                } else {
+                    m_state = CaptureState::Running;
+                }
+            }
+
+            if (!m_wgcFailed) {
+                QImage frame = m_wgcBackend->tryGetFrame();
+                if (!frame.isNull()) {
+                    // 黑帧检测
+                    QPixmap tmp = QPixmap::fromImage(frame);
+                    if (pixmapLooksMostlyBlack(tmp)) {
+                        ++m_blackFrameCount;
+                        if (m_blackFrameCount >= m_blackFrameThreshold) {
+                            qDebug() << "[ScreenCapturer] WGC consecutive black frames, fallback to GDI";
+                            m_wgcFailed = true;
+                            m_wgcBackend->stop();
+                            m_blackFrameCount = 0;
+                            m_state = CaptureState::Recovering;
+                        }
+                    } else {
+                        m_blackFrameCount = 0;
+                    }
+
+                    if (!m_wgcFailed) {
+                        ++m_frameIndex;
+                        emit frameCaptured(frame);
+
+                        CaptureFrameMetadata meta;
+                        meta.sourceSize    = m_wgcBackend->lastFrameSize();
+                        meta.windowHandle  = m_windowHandle;
+                        meta.backendName   = QStringLiteral("WGC");
+                        meta.frameIndex    = m_frameIndex;
+                        emit frameMetadataChanged(meta);
+                        return;
+                    }
+                } else {
+                    // 无新帧（正常，跳过本 tick）
+                    return;
+                }
+            }
+        }
+
+        // WGC 不可用或已失败，走 GDI fallback
+        captureWithGdiWindow();
+        return;
+    }
+
+    // 屏幕采集路径（保持不变）
     if (m_captureMode != CaptureMode::Window && m_useDXGI) {
         if (captureWithDXGI()) return;
         // DXGI 失败，自动降级
@@ -261,6 +336,118 @@ bool ScreenCapturer::captureWithDXGI()
     return true;
 #else
     return false;
+#endif
+}
+
+void ScreenCapturer::captureWithGdiWindow()
+{
+#ifdef Q_OS_WIN
+    HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
+    if (!hwnd || !IsWindow(hwnd)) {
+        emit captureError(QStringLiteral("Invalid window handle"));
+        return;
+    }
+
+    RECT rect{};
+    if (!GetWindowRect(hwnd, &rect)) {
+        emit captureError(QStringLiteral("GetWindowRect failed"));
+        return;
+    }
+    const int width  = rect.right  - rect.left;
+    const int height = rect.bottom - rect.top;
+    if (width <= 0 || height <= 0) {
+        emit captureError(QStringLiteral("Window has invalid size"));
+        return;
+    }
+
+    auto captureFromDC = [&](bool usePrintWindow) -> QPixmap {
+        HDC screenDc = GetDC(nullptr);
+        if (!screenDc) return {};
+        HDC memDc = CreateCompatibleDC(screenDc);
+        if (!memDc) { ReleaseDC(nullptr, screenDc); return {}; }
+        HBITMAP bitmap = CreateCompatibleBitmap(screenDc, width, height);
+        if (!bitmap) { DeleteDC(memDc); ReleaseDC(nullptr, screenDc); return {}; }
+
+        HGDIOBJ oldObj = SelectObject(memDc, bitmap);
+        bool ok = false;
+        if (usePrintWindow) {
+            ok = PrintWindow(hwnd, memDc, PW_RENDERFULLCONTENT);
+        } else {
+            HDC windowDc = GetWindowDC(hwnd);
+            if (windowDc) {
+                ok = BitBlt(memDc, 0, 0, width, height, windowDc, 0, 0, SRCCOPY | CAPTUREBLT);
+                ReleaseDC(hwnd, windowDc);
+            }
+        }
+
+        QPixmap result;
+        if (ok) {
+            BITMAPINFO bmi{};
+            bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+            bmi.bmiHeader.biWidth       = width;
+            bmi.bmiHeader.biHeight      = -height;
+            bmi.bmiHeader.biPlanes      = 1;
+            bmi.bmiHeader.biBitCount    = 32;
+            bmi.bmiHeader.biCompression = BI_RGB;
+
+            QImage image(width, height, QImage::Format_ARGB32);
+            if (!image.isNull()) {
+                if (GetDIBits(memDc, bitmap, 0,
+                              static_cast<UINT>(height),
+                              image.bits(), &bmi, DIB_RGB_COLORS) > 0) {
+                    result = QPixmap::fromImage(image);
+                }
+            }
+        }
+
+        SelectObject(memDc, oldObj);
+        DeleteObject(bitmap);
+        DeleteDC(memDc);
+        ReleaseDC(nullptr, screenDc);
+        return result;
+    };
+
+    QString backendUsed;
+    QPixmap pixmap = captureFromDC(true);
+    if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+        backendUsed = QStringLiteral("PrintWindow");
+    } else {
+        pixmap = captureFromDC(false);
+        if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+            backendUsed = QStringLiteral("BitBlt");
+        } else {
+            const QPoint center((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
+            QScreen* screen = QGuiApplication::screenAt(center);
+            if (!screen) screen = QGuiApplication::primaryScreen();
+            if (screen) {
+                pixmap = screen->grabWindow(0, rect.left, rect.top, width, height);
+                backendUsed = QStringLiteral("ScreenCrop");
+            }
+        }
+    }
+
+    if (pixmap.isNull()) {
+        emit captureError(QStringLiteral("GDI capture returned null pixmap"));
+        return;
+    }
+
+    // 原始分辨率输出，不强制缩放
+    QImage frame = pixmap.toImage().convertToFormat(QImage::Format_RGB32);
+    if (frame.isNull()) {
+        emit captureError(QStringLiteral("GDI frame conversion failed"));
+        return;
+    }
+
+    ++m_frameIndex;
+    emit frameCaptured(frame);
+
+    CaptureFrameMetadata meta;
+    meta.sourceSize     = frame.size();
+    meta.sourceGeometry = QRect(rect.left, rect.top, width, height);
+    meta.windowHandle   = m_windowHandle;
+    meta.backendName    = backendUsed;
+    meta.frameIndex     = m_frameIndex;
+    emit frameMetadataChanged(meta);
 #endif
 }
 
