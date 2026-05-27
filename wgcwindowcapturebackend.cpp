@@ -1,17 +1,19 @@
-#include "wgcwindowcapturebackend.h"
 #ifdef Q_OS_WIN
-
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
-// C++/WinRT 头文件必须先于 Win32/WRL 头文件
+// C++/WinRT 头文件必须在 Windows.h 之前 include（包括经由其他头文件间接引入的 Windows.h）
 #define WINRT_LEAN_AND_MEAN
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
+#endif
+
+#include "wgcwindowcapturebackend.h"
+#ifdef Q_OS_WIN
 
 #include <Windows.h>
 #include <d3d11.h>
