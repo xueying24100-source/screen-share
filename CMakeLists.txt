@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(ScreenShare_Capturer LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -15,6 +15,7 @@ set(SOURCES
     annotationoverlay.cpp
     annotationwindow.cpp
     screencapturer.cpp
+    wgcwindowcapturebackend.cpp
     sourceenumerator.cpp
     audiocapturer.cpp
     audioplayer.cpp
@@ -26,6 +27,7 @@ set(HEADERS
     annotationoverlay.h
     annotationwindow.h
     screencapturer.h
+    wgcwindowcapturebackend.h
     sourceenumerator.h
     audiocapturer.h
     audioplayer.h
@@ -45,5 +47,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32 WindowsApp)
 endif()
