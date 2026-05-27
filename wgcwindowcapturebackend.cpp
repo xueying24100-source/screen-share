@@ -59,11 +59,15 @@ WgcWindowCaptureBackend::~WgcWindowCaptureBackend()
 
 bool WgcWindowCaptureBackend::isSupported()
 {
-    try {
-        return winrt::Windows::Graphics::Capture::GraphicsCaptureSession::IsSupported();
-    } catch (...) {
-        return false;
+    static int cached = -1;
+    if (cached < 0) {
+        try {
+            cached = winrt::Windows::Graphics::Capture::GraphicsCaptureSession::IsSupported() ? 1 : 0;
+        } catch (...) {
+            cached = 0;
+        }
     }
+    return cached == 1;
 }
 
 bool WgcWindowCaptureBackend::start(HWND hwnd)
@@ -184,6 +188,12 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         if (!frame) {
             return {};
         }
+        struct FrameGuard {
+            decltype(frame)& frameRef;
+            ~FrameGuard() {
+                try { frameRef.Close(); } catch (...) {}
+            }
+        } frameGuard{frame};
 
         // 2. 获取 surface
         auto surface = frame.Surface();
@@ -193,7 +203,6 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         Microsoft::WRL::ComPtr<ID3D11Texture2D> frameTex;
         HRESULT hr = dxgiAccess->GetInterface(IID_PPV_ARGS(frameTex.GetAddressOf()));
         if (FAILED(hr)) {
-            frame.Close();
             return {};
         }
 
@@ -201,7 +210,6 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         D3D11_TEXTURE2D_DESC desc{};
         frameTex->GetDesc(&desc);
         if (desc.Width == 0 || desc.Height == 0) {
-            frame.Close();
             return {};
         }
 
@@ -224,7 +232,6 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
                 &stagingDesc, nullptr,
                 m_impl->stagingTexture.ReleaseAndGetAddressOf());
             if (FAILED(hr)) {
-                frame.Close();
                 return {};
             }
             m_impl->stagingWidth  = desc.Width;
@@ -249,7 +256,6 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         D3D11_MAPPED_SUBRESOURCE mapped{};
         hr = m_impl->d3dContext->Map(m_impl->stagingTexture.Get(), 0, D3D11_MAP_READ, 0, &mapped);
         if (FAILED(hr)) {
-            frame.Close();
             return {};
         }
 
@@ -268,9 +274,6 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         }
 
         m_impl->d3dContext->Unmap(m_impl->stagingTexture.Get(), 0);
-
-        // 7. 释放帧资源
-        frame.Close();
 
         m_impl->lastSize = QSize(static_cast<int>(desc.Width),
                                   static_cast<int>(desc.Height));

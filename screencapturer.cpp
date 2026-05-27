@@ -5,6 +5,7 @@
 #include <QScreen>
 #include <QPixmap>
 #include <QColor>
+#include <QDateTime>
 #include <QDebug>
 #include <cstring>
 #include <algorithm>
@@ -84,6 +85,8 @@ void ScreenCapturer::stop()
     m_wgcFailed = false;
     m_blackFrameCount = 0;
     m_frameIndex = 0;
+    m_lastWgcFrame = QImage{};
+    m_lastWgcFrameTimeMs = 0;
     m_state = CaptureState::Stopped;
     qDebug() << "[ScreenCapturer] stopped";
 }
@@ -115,6 +118,8 @@ void ScreenCapturer::captureFrame()
             if (!m_wgcFailed) {
                 QImage frame = m_wgcBackend->tryGetFrame();
                 if (!frame.isNull()) {
+                    m_lastWgcFrame = frame;
+                    m_lastWgcFrameTimeMs = QDateTime::currentMSecsSinceEpoch();
                     // 黑帧检测
                     QPixmap tmp = QPixmap::fromImage(frame);
                     if (pixmapLooksMostlyBlack(tmp)) {
@@ -143,7 +148,10 @@ void ScreenCapturer::captureFrame()
                         return;
                     }
                 } else {
-                    // 无新帧（正常，跳过本 tick）
+                    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+                    if (!m_lastWgcFrame.isNull() && (now - m_lastWgcFrameTimeMs) <= 200) {
+                        emit frameCaptured(m_lastWgcFrame);
+                    }
                     return;
                 }
             }
