@@ -4,18 +4,19 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
-#include <d3d11.h>
-#include <dxgi1_2.h>
-#include <wrl/client.h>
 
-// C++/WinRT
+// C++/WinRT 头文件必须先于 Win32/WRL 头文件
 #define WINRT_LEAN_AND_MEAN
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
+
+#include <Windows.h>
+#include <d3d11.h>
+#include <dxgi1_2.h>
+#include <wrl/client.h>
 #include <Windows.Graphics.Capture.Interop.h>
 #include <windows.graphics.directx.direct3d11.interop.h>
 
