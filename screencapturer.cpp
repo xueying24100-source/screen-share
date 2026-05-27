@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QDateTime>
 #include <QDebug>
+#include <QThread>
 #include <cstring>
 #include <algorithm>
 
@@ -74,7 +75,8 @@ void ScreenCapturer::start(int fps)
     int interval = (fps > 0) ? (1000 / fps) : 33;
     m_timer->start(interval);
     m_running = true;
-    qDebug() << "[ScreenCapturer] started, interval =" << interval << "ms";
+    qDebug() << "[ScreenCapturer] thread=" << QThread::currentThread()
+             << "started, interval =" << interval << "ms";
 }
 
 void ScreenCapturer::startScreen(int screenIndex, int fps)

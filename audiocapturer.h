@@ -15,11 +15,13 @@ public:
     explicit AudioCapturer(QObject* parent = nullptr);
     ~AudioCapturer();
 
+    bool isRunning() const { return m_running; }
+    bool isMuted() const { return m_muted; }
+
+public slots:
     void start();
     void stop();
-    bool isRunning() const { return m_running; }
-    void setMuted(bool muted) { m_muted = muted; }
-    bool isMuted() const { return m_muted; }
+    void setMuted(bool muted);
 
 signals:
     void audioDataReady(const QByteArray& data);

@@ -14,12 +14,12 @@ public:
     explicit AudioPlayer(QObject* parent = nullptr);
     ~AudioPlayer();
 
-    void start();
-    void start(const QAudioFormat& format);
-    void stop();
     bool isRunning() const { return m_running; }
 
 public slots:
+    void start();
+    void start(const QAudioFormat& format);
+    void stop();
     void playData(const QByteArray& data);
 
 signals:

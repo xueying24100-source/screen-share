@@ -13,6 +13,8 @@ public:
     void setMicGain(double gain);
     void setSystemGain(double gain);
     void setDuckingEnabled(bool on);
+
+public slots:
     void pushMicPcm(const QByteArray& pcm16k1chInt16);
     void pushSystemPcm(const QByteArray& pcmFloat32Interleaved, int sampleRate, int channels);
     void reset();

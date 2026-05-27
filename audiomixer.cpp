@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QDebug>
+#include <QThread>
 #include <QtGlobal>
 
 #include <cmath>
@@ -35,7 +36,8 @@ void AudioMixer::pushMicPcm(const QByteArray& pcm16k1chInt16)
     }
 
     if (!m_firstMicLogged) {
-        qDebug() << "[Mixer] first mic packet bytes=" << pcm16k1chInt16.size();
+        qDebug() << "[Mixer] thread=" << QThread::currentThread()
+                 << "first mic packet bytes=" << pcm16k1chInt16.size();
         m_firstMicLogged = true;
     }
     m_lastMicDataMs = QDateTime::currentMSecsSinceEpoch();

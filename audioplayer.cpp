@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QDebug>
+#include <QThread>
 
 AudioPlayer::AudioPlayer(QObject* parent)
     : QObject(parent)
@@ -32,6 +33,8 @@ void AudioPlayer::start(const QAudioFormat& format)
     if (m_running) {
         return;
     }
+
+    qDebug() << "[AudioPlayer] thread=" << QThread::currentThread();
 
     const QAudioDevice outputDevice = QMediaDevices::defaultAudioOutput();
     if (outputDevice.isNull()) {
