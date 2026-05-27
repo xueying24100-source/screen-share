@@ -4,19 +4,19 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPushButton>
-#include <QTimer>
 
 ShareToolbar::ShareToolbar(QWidget* parent)
     : QWidget(parent)
-    , m_fadeTimer(new QTimer(this))
 {
     setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    setAttribute(Qt::WA_TranslucentBackground, true);
+    setObjectName(QStringLiteral("shareToolbarRoot"));
+    setAttribute(Qt::WA_StyledBackground, true);
     setMouseTracking(true);
-    setStyleSheet(QStringLiteral("background: rgba(32,36,48,230); border-radius: 10px;"
-                                 "QPushButton{color:#fff;background:transparent;border:none;padding:8px 10px;}"
-                                 "QPushButton:hover{background:rgba(255,255,255,30);border-radius:6px;}"
-                                 "QPushButton#stopButton{color:#FF6B6B;}"));
+    setStyleSheet(QStringLiteral(
+        "QWidget#shareToolbarRoot { background: #202430; border-radius: 10px; }"
+        "QPushButton { color:#fff; background:transparent; border:none; padding:8px 10px; }"
+        "QPushButton:hover { background:rgba(255,255,255,30); border-radius:6px; }"
+        "QPushButton#stopButton { color:#FF6B6B; }"));
 
     m_pauseButton = new QPushButton(this);
     m_annotationButton = new QPushButton(this);
@@ -59,14 +59,7 @@ ShareToolbar::ShareToolbar(QWidget* parent)
     connect(m_backButton, &QPushButton::clicked, this, &ShareToolbar::backRequested);
     connect(m_stopButton, &QPushButton::clicked, this, &ShareToolbar::stopRequested);
 
-    m_fadeTimer->setSingleShot(true);
-    m_fadeTimer->setInterval(3000);
-    connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
-        setWindowOpacity(0.6);
-    });
-
     refreshTexts();
-    resetFadeTimer();
 }
 
 void ShareToolbar::setPaused(bool paused)
@@ -106,20 +99,16 @@ void ShareToolbar::mouseMoveEvent(QMouseEvent* event)
     if (event->buttons() & Qt::LeftButton) {
         move(event->globalPosition().toPoint() - m_dragOffset);
     }
-    resetFadeTimer();
     QWidget::mouseMoveEvent(event);
 }
 
 void ShareToolbar::enterEvent(QEnterEvent* event)
 {
-    Q_UNUSED(event);
-    setWindowOpacity(1.0);
-    resetFadeTimer();
+    QWidget::enterEvent(event);
 }
 
 void ShareToolbar::leaveEvent(QEvent* event)
 {
-    resetFadeTimer();
     QWidget::leaveEvent(event);
 }
 
@@ -129,10 +118,4 @@ void ShareToolbar::refreshTexts()
     m_annotationButton->setText(m_annotationEnabled ? QStringLiteral("✏️ 批注:开") : QStringLiteral("✏️ 批注:关"));
     m_micButton->setText(m_micMuted ? QStringLiteral("🔇 麦克风:静音") : QStringLiteral("🎤 麦克风:开启"));
     m_systemAudioButton->setText(m_systemAudioEnabled ? QStringLiteral("🔊 共享声音") : QStringLiteral("🔈 共享声音:关"));
-}
-
-void ShareToolbar::resetFadeTimer()
-{
-    setWindowOpacity(1.0);
-    m_fadeTimer->start();
 }

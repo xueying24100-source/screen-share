@@ -4,7 +4,7 @@
 
 #include "sharesourcepicker.h"
 
-class AnnotationOverlay;
+class AnnotationWindow;
 class AudioCapturer;
 class QPushButton;
 class QTimer;
@@ -24,13 +24,13 @@ private:
     void startSharing(const ShareSelection& selection);
     void stopSharing();
     void updateToolbarPosition();
-    void updateOverlayGeometry();
+    void applyAnnotationGeometry();
 
     ScreenCapturer* m_capturer{nullptr};
     Sender* m_sender{nullptr};
     AudioCapturer* m_audioCapturer{nullptr};
     SystemAudioCapturer* m_systemAudioCapturer{nullptr};
-    AnnotationOverlay* m_overlay{nullptr};
+    AnnotationWindow* m_annotationWindow{nullptr};
     ShareToolbar* m_toolbar{nullptr};
     QTimer* m_windowFollowTimer{nullptr};
 

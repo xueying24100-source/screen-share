@@ -4,7 +4,6 @@
 #include <QWidget>
 
 class QPushButton;
-class QTimer;
 
 class ShareToolbar : public QWidget
 {
@@ -33,7 +32,6 @@ protected:
 
 private:
     void refreshTexts();
-    void resetFadeTimer();
 
     QPushButton* m_pauseButton{nullptr};
     QPushButton* m_annotationButton{nullptr};
@@ -42,7 +40,6 @@ private:
     QPushButton* m_backButton{nullptr};
     QPushButton* m_stopButton{nullptr};
 
-    QTimer* m_fadeTimer{nullptr};
     QPoint m_dragOffset;
     bool m_paused{false};
     bool m_annotationEnabled{true};

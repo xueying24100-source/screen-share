@@ -1,4 +1,5 @@
 #include "annotationoverlay.h"
+#include "annotationwindow.h"
 
 #include <QEvent>
 #include <QFocusEvent>
@@ -136,6 +137,7 @@ AnnotationOverlay::AnnotationOverlay(QWidget* parent)
     setAttribute(Qt::WA_TranslucentBackground, true);
     setStyleSheet("background: transparent;");
     setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 // ──────────────────────────────────────────────
@@ -579,3 +581,21 @@ void AnnotationOverlay::resizeEvent(QResizeEvent* e)
     rebuildCache();
 }
 
+void AnnotationOverlay::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Escape) {
+        if (isEditingText()) {
+            cancelTextInput();
+            event->accept();
+            return;
+        }
+        if (auto* annotationWindow = qobject_cast<AnnotationWindow*>(parentWidget())) {
+            annotationWindow->requestExit();
+        } else {
+            emit closeRequested();
+        }
+        event->accept();
+        return;
+    }
+    QWidget::keyPressEvent(event);
+}
