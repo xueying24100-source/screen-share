@@ -70,7 +70,7 @@ void AudioCapturer::stop()
 
 void AudioCapturer::onDataReady()
 {
-    if (!m_audioDevice) {
+    if (!m_audioDevice || m_muted) {
         return;
     }
 

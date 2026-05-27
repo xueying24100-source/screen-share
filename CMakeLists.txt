@@ -12,26 +12,34 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Multimedia)
 set(SOURCES
     main.cpp
     mainwindow.cpp
+    meetingmainwindow.cpp
     annotationoverlay.cpp
     annotationwindow.cpp
     wgctestwindow.cpp
     screencapturer.cpp
     wgcwindowcapturebackend.cpp
+    sharesourcepicker.cpp
+    sharetoolbar.cpp
     sourceenumerator.cpp
     audiocapturer.cpp
+    systemaudiocapturer.cpp
     audioplayer.cpp
     sender.cpp
 )
 
 set(HEADERS
     mainwindow.h
+    meetingmainwindow.h
     annotationoverlay.h
     annotationwindow.h
     wgctestwindow.h
     screencapturer.h
     wgcwindowcapturebackend.h
+    sharesourcepicker.h
+    sharetoolbar.h
     sourceenumerator.h
     audiocapturer.h
+    systemaudiocapturer.h
     audioplayer.h
     sender.h
 )
@@ -49,7 +57,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32 WindowsApp)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _WIN32_WINNT=0x0A00
+    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32 windowsapp ole32 mmdevapi propsys avrt)
     target_compile_options(${PROJECT_NAME} PRIVATE
         /await:strict
         /Zc:__cplusplus

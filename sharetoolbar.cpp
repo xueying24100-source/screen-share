@@ -1,0 +1,138 @@
+#include "sharetoolbar.h"
+
+#include <QEnterEvent>
+#include <QHBoxLayout>
+#include <QMouseEvent>
+#include <QPushButton>
+#include <QTimer>
+
+ShareToolbar::ShareToolbar(QWidget* parent)
+    : QWidget(parent)
+    , m_fadeTimer(new QTimer(this))
+{
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setAttribute(Qt::WA_TranslucentBackground, true);
+    setMouseTracking(true);
+    setStyleSheet(QStringLiteral("background: rgba(32,36,48,230); border-radius: 10px;"
+                                 "QPushButton{color:#fff;background:transparent;border:none;padding:8px 10px;}"
+                                 "QPushButton:hover{background:rgba(255,255,255,30);border-radius:6px;}"
+                                 "QPushButton#stopButton{color:#FF6B6B;}"));
+
+    m_pauseButton = new QPushButton(this);
+    m_annotationButton = new QPushButton(this);
+    m_micButton = new QPushButton(this);
+    m_systemAudioButton = new QPushButton(this);
+    m_backButton = new QPushButton(QStringLiteral("⛶ 回到主窗口"), this);
+    m_stopButton = new QPushButton(QStringLiteral("⛔ 结束共享"), this);
+    m_stopButton->setObjectName(QStringLiteral("stopButton"));
+
+    auto* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(12, 8, 12, 8);
+    layout->setSpacing(6);
+    layout->addWidget(m_pauseButton);
+    layout->addWidget(m_annotationButton);
+    layout->addWidget(m_micButton);
+    layout->addWidget(m_systemAudioButton);
+    layout->addWidget(m_backButton);
+    layout->addWidget(m_stopButton);
+
+    connect(m_pauseButton, &QPushButton::clicked, this, [this]() {
+        m_paused = !m_paused;
+        refreshTexts();
+        emit pauseToggled(m_paused);
+    });
+    connect(m_annotationButton, &QPushButton::clicked, this, [this]() {
+        m_annotationEnabled = !m_annotationEnabled;
+        refreshTexts();
+        emit annotationToggled(m_annotationEnabled);
+    });
+    connect(m_micButton, &QPushButton::clicked, this, [this]() {
+        m_micMuted = !m_micMuted;
+        refreshTexts();
+        emit micMuteToggled(m_micMuted);
+    });
+    connect(m_systemAudioButton, &QPushButton::clicked, this, [this]() {
+        m_systemAudioEnabled = !m_systemAudioEnabled;
+        refreshTexts();
+        emit systemAudioToggled(m_systemAudioEnabled);
+    });
+    connect(m_backButton, &QPushButton::clicked, this, &ShareToolbar::backRequested);
+    connect(m_stopButton, &QPushButton::clicked, this, &ShareToolbar::stopRequested);
+
+    m_fadeTimer->setSingleShot(true);
+    m_fadeTimer->setInterval(3000);
+    connect(m_fadeTimer, &QTimer::timeout, this, [this]() {
+        setWindowOpacity(0.6);
+    });
+
+    refreshTexts();
+    resetFadeTimer();
+}
+
+void ShareToolbar::setPaused(bool paused)
+{
+    m_paused = paused;
+    refreshTexts();
+}
+
+void ShareToolbar::setAnnotationEnabled(bool enabled)
+{
+    m_annotationEnabled = enabled;
+    refreshTexts();
+}
+
+void ShareToolbar::setMicMuted(bool muted)
+{
+    m_micMuted = muted;
+    refreshTexts();
+}
+
+void ShareToolbar::setSystemAudioEnabled(bool enabled)
+{
+    m_systemAudioEnabled = enabled;
+    refreshTexts();
+}
+
+void ShareToolbar::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        m_dragOffset = event->globalPosition().toPoint() - frameGeometry().topLeft();
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void ShareToolbar::mouseMoveEvent(QMouseEvent* event)
+{
+    if (event->buttons() & Qt::LeftButton) {
+        move(event->globalPosition().toPoint() - m_dragOffset);
+    }
+    resetFadeTimer();
+    QWidget::mouseMoveEvent(event);
+}
+
+void ShareToolbar::enterEvent(QEnterEvent* event)
+{
+    Q_UNUSED(event);
+    setWindowOpacity(1.0);
+    resetFadeTimer();
+}
+
+void ShareToolbar::leaveEvent(QEvent* event)
+{
+    resetFadeTimer();
+    QWidget::leaveEvent(event);
+}
+
+void ShareToolbar::refreshTexts()
+{
+    m_pauseButton->setText(m_paused ? QStringLiteral("▶ 继续共享") : QStringLiteral("⏸ 暂停共享"));
+    m_annotationButton->setText(m_annotationEnabled ? QStringLiteral("✏️ 批注:开") : QStringLiteral("✏️ 批注:关"));
+    m_micButton->setText(m_micMuted ? QStringLiteral("🔇 麦克风:静音") : QStringLiteral("🎤 麦克风:开启"));
+    m_systemAudioButton->setText(m_systemAudioEnabled ? QStringLiteral("🔊 共享声音") : QStringLiteral("🔈 共享声音:关"));
+}
+
+void ShareToolbar::resetFadeTimer()
+{
+    setWindowOpacity(1.0);
+    m_fadeTimer->start();
+}

@@ -45,6 +45,8 @@ void ScreenCapturer::start(int fps)
         m_windowHandle = 0;
     }
     m_preserveModeForStart = false;
+    m_paused = false;
+    m_lastEmittedFrame = QImage{};
     int interval = (fps > 0) ? (1000 / fps) : 33;
     m_timer->start(interval);
     m_running = true;
@@ -86,13 +88,39 @@ void ScreenCapturer::stop()
     m_blackFrameCount = 0;
     m_frameIndex = 0;
     m_lastWgcFrame = QImage{};
+    m_lastEmittedFrame = QImage{};
     m_lastWgcFrameTimeMs = 0;
+    m_paused = false;
     m_state = CaptureState::Stopped;
     qDebug() << "[ScreenCapturer] stopped";
 }
 
+void ScreenCapturer::pause()
+{
+    m_paused = true;
+}
+
+void ScreenCapturer::resume()
+{
+    m_paused = false;
+}
+
+void ScreenCapturer::setWgcOptions(bool cursor, bool border, int minUpdateMs)
+{
+    m_wgcCursorEnabled = cursor;
+    m_wgcBorderRequired = border;
+    m_wgcMinUpdateIntervalMs = qMax(0, minUpdateMs);
+}
+
 void ScreenCapturer::captureFrame()
 {
+    if (m_paused) {
+        if (!m_lastEmittedFrame.isNull()) {
+            emit frameCaptured(m_lastEmittedFrame);
+        }
+        return;
+    }
+
 #ifdef Q_OS_WIN
     if (m_captureMode == CaptureMode::Window) {
         // 窗口关闭检测
@@ -107,6 +135,9 @@ void ScreenCapturer::captureFrame()
         if (!m_wgcFailed && WgcWindowCaptureBackend::isSupported()) {
             if (!m_wgcBackend->isRunning()) {
                 m_state = CaptureState::Starting;
+                m_wgcBackend->setCursorCaptureEnabled(m_wgcCursorEnabled);
+                m_wgcBackend->setBorderRequired(m_wgcBorderRequired);
+                m_wgcBackend->setMinUpdateInterval(m_wgcMinUpdateIntervalMs);
                 if (!m_wgcBackend->start(hwnd)) {
                     qDebug() << "[ScreenCapturer] WGC start failed, fallback to GDI";
                     m_wgcFailed = true;
@@ -137,6 +168,7 @@ void ScreenCapturer::captureFrame()
 
                     if (!m_wgcFailed) {
                         ++m_frameIndex;
+                        m_lastEmittedFrame = frame;
                         emit frameCaptured(frame);
 
                         CaptureFrameMetadata meta;
@@ -150,6 +182,7 @@ void ScreenCapturer::captureFrame()
                 } else {
                     const qint64 now = QDateTime::currentMSecsSinceEpoch();
                     if (!m_lastWgcFrame.isNull() && (now - m_lastWgcFrameTimeMs) <= 200) {
+                        m_lastEmittedFrame = m_lastWgcFrame;
                         emit frameCaptured(m_lastWgcFrame);
                     }
                     return;
@@ -340,6 +373,7 @@ bool ScreenCapturer::captureWithDXGI()
 
     QImage output = frame.scaled(m_outputSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
                          .convertToFormat(QImage::Format_RGB32);
+    m_lastEmittedFrame = output;
     emit frameCaptured(output);
     return true;
 #else
@@ -447,6 +481,7 @@ void ScreenCapturer::captureWithGdiWindow()
     }
 
     ++m_frameIndex;
+    m_lastEmittedFrame = frame;
     emit frameCaptured(frame);
 
     CaptureFrameMetadata meta;
@@ -597,6 +632,7 @@ void ScreenCapturer::captureWithGrabWindow()
                                  Qt::SmoothTransformation)
                          .convertToFormat(QImage::Format_RGB32);
 
+    m_lastEmittedFrame = frame;
     emit frameCaptured(frame);
 }
 

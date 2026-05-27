@@ -1,3 +1,4 @@
+#include <QtGlobal>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -23,6 +24,7 @@
 #include <windows.graphics.directx.direct3d11.interop.h>
 
 #include <QDebug>
+#include <chrono>
 
 struct WgcWindowCaptureBackend::Impl {
     Microsoft::WRL::ComPtr<ID3D11Device>        d3dDevice;
@@ -38,6 +40,9 @@ struct WgcWindowCaptureBackend::Impl {
 
     bool  running{false};
     QSize lastSize;
+    bool  cursorCaptureEnabled{true};
+    bool  borderRequired{true};
+    int   minUpdateIntervalMs{0};
 
     void reset() {
         if (session)    { try { session.Close();   } catch (...) {} session    = nullptr; }
@@ -146,9 +151,19 @@ bool WgcWindowCaptureBackend::start(HWND hwnd)
         // 6. 创建 capture session
         m_impl->session = m_impl->framePool.CreateCaptureSession(m_impl->captureItem);
 
-        // 7. 关闭光标捕获（可选，减少干扰）
+        // 7. 应用会话选项（必须在 StartCapture 之前）
         try {
-            m_impl->session.IsCursorCaptureEnabled(false);
+            m_impl->session.IsCursorCaptureEnabled(m_impl->cursorCaptureEnabled);
+        } catch (...) {}
+
+        try {
+            m_impl->session.IsBorderRequired(m_impl->borderRequired);
+        } catch (...) {}
+
+        try {
+            if (m_impl->minUpdateIntervalMs > 0) {
+                m_impl->session.MinUpdateInterval(std::chrono::milliseconds(m_impl->minUpdateIntervalMs));
+            }
         } catch (...) {}
 
         // 8. 开始捕获
@@ -179,6 +194,21 @@ bool WgcWindowCaptureBackend::isRunning() const
     return m_impl->running;
 }
 
+void WgcWindowCaptureBackend::setCursorCaptureEnabled(bool enabled)
+{
+    m_impl->cursorCaptureEnabled = enabled;
+}
+
+void WgcWindowCaptureBackend::setBorderRequired(bool required)
+{
+    m_impl->borderRequired = required;
+}
+
+void WgcWindowCaptureBackend::setMinUpdateInterval(int ms)
+{
+    m_impl->minUpdateIntervalMs = qMax(0, ms);
+}
+
 QImage WgcWindowCaptureBackend::tryGetFrame()
 {
     if (!m_impl->running || !m_impl->framePool) {
@@ -202,7 +232,7 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         auto surface = frame.Surface();
 
         // 3. 通过 IDirect3DDxgiInterfaceAccess 获取 ID3D11Texture2D
-        auto dxgiAccess = surface.as<Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
+        auto dxgiAccess = surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
         Microsoft::WRL::ComPtr<ID3D11Texture2D> frameTex;
         HRESULT hr = dxgiAccess->GetInterface(IID_PPV_ARGS(frameTex.GetAddressOf()));
         if (FAILED(hr)) {
