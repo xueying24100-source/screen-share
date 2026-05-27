@@ -1,5 +1,7 @@
 #pragma once
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <QObject>
 #include <QImage>
 #include <QPixmap>
