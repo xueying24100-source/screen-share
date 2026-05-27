@@ -65,52 +65,48 @@ LoginPage → RoomPage
 
 | 依赖 | 版本 | 说明 |
 |------|------|------|
-| Qt | 6.10.3 | Core, Widgets, Network |
+| Qt | ≥ 6.5 | Core, Widgets, Network |
 | CMake | ≥ 3.19 | 构建系统 |
-| 编译器 | C++17 及以上 | Windows: MinGW 13.1.0 / macOS: Clang |
+| 编译器 | C++17 及以上 | Windows: MinGW / MSVC，macOS: Clang |
+
+确保 `cmake`、`qmake`（或 Qt 的 `bin` 目录）已在系统 PATH 中。
 
 ## 编译与运行
 
-### 方式一：命令行构建（Windows）
+### 方式一：命令行构建（Windows / macOS 通用）
 
 ```bash
-# 0. 设置环境变量（每次新开终端需要执行）
-export PATH="/d/Qt/Tools/CMake_64/bin:/d/Qt/6.10.3/mingw_64/bin:/d/Qt/Tools/mingw1310_64/bin:$PATH"
-
 # 1. 全量构建（首次或修改了 CMakeLists.txt 时）
-rm -rf build
-cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
+cmake -B build
 cmake --build build
 
-# 2. 增量构建（仅修改了 .cpp/.h 文件时，速度更快）
+# 2. 增量构建（仅修改了 .cpp/.h 文件时）
 cmake --build build
 
-# 3. 部署依赖 DLL（首次构建后执行，让 exe 可双击运行）
+# 3. 部署运行时依赖
+#    Windows:
 windeployqt build/screenShare.exe
-
-# 4. 运行
-./build/screenShare.exe
-```
-
-### 方式二：命令行构建（macOS）
-
-```bash
-# 1. 全量构建
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-
-# 2. 打包为 .app（可选）
+#    macOS:
 macdeployqt build/screenShare.app
 
-# 3. 运行
+# 4. 运行
+#    Windows:
+./build/screenShare.exe
+#    macOS:
 open build/screenShare.app
 ```
 
-### 方式三：Qt Creator
+> 如果命令行找不到 `cmake` 或 `windeployqt`，需要将 Qt 和编译器的 `bin` 目录添加到 PATH。
+> 例如（Windows + MinGW，路径根据实际安装位置调整）：
+> ```bash
+> export PATH="你的Qt路径/mingw_64/bin:你的MinGW路径/bin:$PATH"
+> ```
+
+### 方式二：Qt Creator
 
 用 Qt Creator 打开项目根目录的 `CMakeLists.txt`，点击运行即可。
 
-### 方式四：GitHub Actions 自动构建
+### 方式三：GitHub Actions 自动构建
 
 推送到 GitHub 后自动编译，支持 macOS 和 Windows 双平台：
 
@@ -120,17 +116,6 @@ open build/screenShare.app
 4. 在 Artifacts 区域下载对应平台的构建产物
 
 也可手动点击 **Run workflow** 按钮触发构建。
-
-## 团队分工
-
-| 成员 | 负责模块 |
-|------|----------|
-| 蒋宗原 | 屏幕共享模块 - 窗口枚举与采集 (Windows) |
-| 韦燕丹 | 屏幕共享模块 - 屏幕枚举与采集 (Windows) |
-| 俞哲钊 | 屏幕共享模块 - 窗口枚举与采集 (macOS) |
-| 邢雨茁 | 屏幕共享模块 - 屏幕枚举与采集 (macOS) |
-| 黄俊杰 | 客户端业务架构 (macOS) — UI 页面、房间管理 |
-| 赵芃年 | 客户端业务架构 (Windows) |
 
 ## 技术栈
 
