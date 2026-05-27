@@ -1,6 +1,7 @@
 #include "annotationwindow.h"
 
 #include <QComboBox>
+#include <QCloseEvent>
 #include <QDebug>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -270,11 +271,11 @@ AnnotationWindow::AnnotationWindow(QWidget* parent)
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_TranslucentBackground, true);
     setAttribute(Qt::WA_NoSystemBackground, true);
+    setFocusPolicy(Qt::StrongFocus);
 
     // ── Overlay ───────────────────────────────────────────────────────────
     m_overlay = new AnnotationOverlay(this);
-
-    showFullScreen();
+    resize(800, 600);
 
     m_overlay->setGeometry(rect());
     m_overlay->raise();
@@ -311,21 +312,35 @@ AnnotationWindow::AnnotationWindow(QWidget* parent)
             m_overlay, &AnnotationOverlay::redo);
     connect(toolbar, &FloatingToolbar::clearRequested,
             m_overlay, &AnnotationOverlay::clearAll);
-    connect(toolbar, &FloatingToolbar::exitRequested, this, [this]() {
-        emit closed();
-        close();
-    });
+    connect(toolbar, &FloatingToolbar::exitRequested, this, &AnnotationWindow::requestExit);
 
     // ── Forward stroke/text packets to the network layer ─────────────────
     connect(m_overlay, &AnnotationOverlay::strokePacketReady,
             this, &AnnotationWindow::strokePacketReady);
     connect(m_overlay, &AnnotationOverlay::textAnnotationCreated,
             this, &AnnotationWindow::textAnnotationCreated);
+    connect(m_overlay, &AnnotationOverlay::closeRequested, this, &AnnotationWindow::requestExit);
 
     // Debug / legacy
     connect(m_overlay, &AnnotationOverlay::strokeFinished, this, [](const Stroke& s) {
         qDebug() << "[strokeFinished] points:" << s.points.size();
     });
+}
+
+void AnnotationWindow::setTargetGeometry(const QRect& screenRect)
+{
+    setGeometry(screenRect);
+    if (m_overlay) {
+        m_overlay->setGeometry(rect());
+    }
+    raise();
+    activateWindow();
+}
+
+void AnnotationWindow::requestExit()
+{
+    emitClosedOnce();
+    close();
 }
 
 void AnnotationWindow::keyPressEvent(QKeyEvent* event)
@@ -338,8 +353,7 @@ void AnnotationWindow::keyPressEvent(QKeyEvent* event)
             m_overlay->cancelTextInput();
             return;
         }
-        emit closed();
-        close();
+        requestExit();
         return;
     }
     if (mods & Qt::ControlModifier) {
@@ -376,6 +390,29 @@ void AnnotationWindow::keyPressEvent(QKeyEvent* event)
         }
     }
     QWidget::keyPressEvent(event);
+}
+
+void AnnotationWindow::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    if (m_overlay) {
+        m_overlay->setGeometry(rect());
+    }
+}
+
+void AnnotationWindow::closeEvent(QCloseEvent* event)
+{
+    emitClosedOnce();
+    QWidget::closeEvent(event);
+}
+
+void AnnotationWindow::emitClosedOnce()
+{
+    if (m_closedEmitted) {
+        return;
+    }
+    m_closedEmitted = true;
+    emit closed();
 }
 
 #include "annotationwindow.moc"

@@ -13,8 +13,8 @@ int main(int argc, char* argv[])
 
     QApplication app(argc, argv);
     MeetingMainWindow w;
-    w.setWindowTitle(QStringLiteral("会议主面板"));
-    w.resize(560, 220);
+    w.setWindowTitle(QStringLiteral("Screen Share"));
+    w.resize(640, 360);
     w.show();
     const int code = app.exec();
 

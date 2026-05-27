@@ -1,6 +1,6 @@
 #include "meetingmainwindow.h"
 
-#include "annotationoverlay.h"
+#include "annotationwindow.h"
 #include "audiocapturer.h"
 #include "screencapturer.h"
 #include "sender.h"
@@ -29,7 +29,6 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     , m_sender(new Sender(this))
     , m_audioCapturer(new AudioCapturer(this))
     , m_systemAudioCapturer(new SystemAudioCapturer(this))
-    , m_overlay(new AnnotationOverlay())
     , m_toolbar(new ShareToolbar())
     , m_windowFollowTimer(new QTimer(this))
 {
@@ -58,9 +57,6 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
 
     setCentralWidget(central);
 
-    m_overlay->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    m_overlay->hide();
-
     connect(m_shareButton, &QPushButton::clicked, this, [this]() {
         ShareSourcePicker picker(this);
         if (picker.exec() != QDialog::Accepted) {
@@ -78,14 +74,31 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
         }
     });
     connect(m_toolbar, &ShareToolbar::annotationToggled, this, [this](bool enabled) {
-        if (!m_overlay) {
+        if (enabled) {
+            if (!m_annotationWindow) {
+                m_annotationWindow = new AnnotationWindow();
+                connect(m_annotationWindow, &AnnotationWindow::strokePacketReady,
+                        m_sender, &Sender::onStrokePacketReady);
+                connect(m_annotationWindow, &AnnotationWindow::textAnnotationCreated,
+                        m_sender, &Sender::onTextAnnotationCreated);
+                connect(m_annotationWindow, &AnnotationWindow::closed, this, [this]() {
+                    if (!m_annotationWindow) {
+                        return;
+                    }
+                    m_annotationWindow->deleteLater();
+                    m_annotationWindow = nullptr;
+                    m_toolbar->setAnnotationEnabled(false);
+                });
+            }
+            applyAnnotationGeometry();
+            m_annotationWindow->show();
+            m_annotationWindow->raise();
+            m_annotationWindow->activateWindow();
             return;
         }
-        if (enabled) {
-            m_overlay->show();
-            m_overlay->raise();
-        } else {
-            m_overlay->hide();
+
+        if (m_annotationWindow) {
+            m_annotationWindow->close();
         }
     });
     connect(m_toolbar, &ShareToolbar::micMuteToggled, this, [this](bool muted) {
@@ -101,7 +114,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     });
     connect(m_toolbar, &ShareToolbar::stopRequested, this, &MeetingMainWindow::stopSharing);
 
-    connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::updateOverlayGeometry);
+    connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
 
     connect(m_capturer, &ScreenCapturer::frameCaptured, m_sender, &Sender::onMainScreenFrameCaptured);
     connect(m_audioCapturer, &AudioCapturer::audioDataReady, m_sender, &Sender::onAudioDataReady);
@@ -109,9 +122,6 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             [this](const QByteArray& pcm, int, int) {
                 m_sender->onAudioDataReady(pcm);
             });
-
-    connect(m_overlay, &AnnotationOverlay::strokePacketReady, m_sender, &Sender::onStrokePacketReady);
-    connect(m_overlay, &AnnotationOverlay::textAnnotationCreated, m_sender, &Sender::onTextAnnotationCreated);
 
     static DebugTransport s_debugTransport;
     m_sender->setTransport(&s_debugTransport);
@@ -126,8 +136,10 @@ MeetingMainWindow::~MeetingMainWindow()
     m_sender->stop();
     delete m_toolbar;
     m_toolbar = nullptr;
-    delete m_overlay;
-    m_overlay = nullptr;
+    if (m_annotationWindow) {
+        delete m_annotationWindow;
+        m_annotationWindow = nullptr;
+    }
 }
 
 void MeetingMainWindow::startSharing(const ShareSelection& selection)
@@ -150,12 +162,10 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
     m_audioCapturer->start();
     m_systemAudioCapturer->setEnabled(selection.includeSystemAudio);
 
-    updateOverlayGeometry();
-    m_overlay->show();
-    m_overlay->raise();
+    applyAnnotationGeometry();
 
     m_toolbar->setPaused(false);
-    m_toolbar->setAnnotationEnabled(true);
+    m_toolbar->setAnnotationEnabled(false);
     m_toolbar->setMicMuted(false);
     m_toolbar->setSystemAudioEnabled(selection.includeSystemAudio);
     updateToolbarPosition();
@@ -178,9 +188,12 @@ void MeetingMainWindow::stopSharing()
     m_audioCapturer->stop();
     m_systemAudioCapturer->setEnabled(false);
 
-    if (m_overlay) {
-        m_overlay->hide();
-        m_overlay->clearAll();
+    if (m_annotationWindow) {
+        disconnect(m_annotationWindow, nullptr, this, nullptr);
+        m_annotationWindow->close();
+        m_annotationWindow->deleteLater();
+        m_annotationWindow = nullptr;
+        m_toolbar->setAnnotationEnabled(false);
     }
     if (m_toolbar) {
         m_toolbar->hide();
@@ -215,9 +228,9 @@ void MeetingMainWindow::updateToolbarPosition()
     m_toolbar->move(g.left() + (g.width() - m_toolbar->width()) / 2, g.top() + 12);
 }
 
-void MeetingMainWindow::updateOverlayGeometry()
+void MeetingMainWindow::applyAnnotationGeometry()
 {
-    if (!m_overlay) {
+    if (!m_annotationWindow) {
         return;
     }
 
@@ -230,19 +243,18 @@ void MeetingMainWindow::updateOverlayGeometry()
         if (!screen) {
             return;
         }
-        m_overlay->setGeometry(screen->geometry());
-        m_overlay->showFullScreen();
+        m_annotationWindow->setTargetGeometry(screen->geometry());
         return;
     }
 
 #ifdef Q_OS_WIN
     HWND hwnd = reinterpret_cast<HWND>(m_currentSelection.hwnd);
     if (!hwnd || !IsWindow(hwnd)) {
-        m_overlay->hide();
+        m_annotationWindow->hide();
         return;
     }
     if (IsIconic(hwnd)) {
-        m_overlay->hide();
+        m_annotationWindow->hide();
         return;
     }
     RECT rect{};
@@ -250,8 +262,11 @@ void MeetingMainWindow::updateOverlayGeometry()
         return;
     }
     const QRect geometry(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-    m_overlay->setGeometry(geometry);
-    m_overlay->show();
-    m_overlay->raise();
+    m_annotationWindow->setTargetGeometry(geometry);
+    if (!m_annotationWindow->isVisible()) {
+        m_annotationWindow->show();
+    }
+    m_annotationWindow->raise();
+    m_annotationWindow->activateWindow();
 #endif
 }
