@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Receiverwindow</class>
+ <widget class="QWidget" name="Receiverwindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>971</width>
+    <height>459</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+    background-color: white;
+    font-family: &quot;Microsoft YaHei&quot;;
+    color: #1f2329;
+}
+
+QLabel#labelStatus {
+    font-size: 15px;
+    color: #333333;
+    font-weight: bold;
+}
+
+QLabel#labelScreenTitle {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+QTextEdit {
+    background-color: white;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 12px;
+}
+
+QPushButton#btnSetOffer {
+    background-color: #1677ff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    min-height: 38px;
+}
+
+QPushButton#btnSetOffer:hover {
+    background-color: #4096ff;
+}
+
+QLabel#labelScreen {
+    background-color: #f2f3f5;
+    border: 2px solid #dcdfe6;
+    border-radius: 12px;
+    color: #8a94a6;
+    font-size: 18px;
+}</string>
+  </property>
+  <widget class="QWidget" name="sender" native="true">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>962</width>
+     <height>451</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <widget class="QWidget" name="LeftPanel" native="true">
+      <widget class="QWidget" name="leftPanel" native="true">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>0</y>
+         <width>341</width>
+         <height>451</height>
+        </rect>
+       </property>
+       <widget class="QTextEdit" name="editLocalAnswer">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>250</y>
+          <width>241</width>
+          <height>81</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QTextEdit" name="editRemoteOffer">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>120</y>
+          <width>241</width>
+          <height>81</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QLabel" name="labelStatus">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>20</y>
+          <width>141</width>
+          <height>41</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>状态：等待发送端offer</string>
+        </property>
+       </widget>
+       <widget class="QWidget" name="rightPanel" native="true">
+        <property name="geometry">
+         <rect>
+          <x>390</x>
+          <y>-1</y>
+          <width>461</width>
+          <height>431</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="labelOfferTitle">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>80</y>
+          <width>131</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>发送端Offer SDP</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="labelAnswerTitle">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>210</y>
+          <width>131</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>本地 Answer SDP</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="btnSetOffer">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>350</y>
+          <width>141</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QWidget#LeftPanel {
+    background-color: #f7f8fa;
+    border-right: 1px solid #e5e6eb;
+}
+
+QWidget#RightPanel {
+    background-color: white;
+}</string>
+        </property>
+        <property name="text">
+         <string>设置发送端Offer</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="RightPanel" native="true">
+      <widget class="QLabel" name="labelScreenTitle">
+       <property name="geometry">
+        <rect>
+         <x>160</x>
+         <y>20</y>
+         <width>131</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>远端共享画面</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="labelScreen">
+       <property name="geometry">
+        <rect>
+         <x>9</x>
+         <y>50</y>
+         <width>441</width>
+         <height>360</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>等待接收共享</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

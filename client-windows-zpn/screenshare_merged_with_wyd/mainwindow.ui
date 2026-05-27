@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1004</width>
+    <height>707</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>720</width>
+    <height>480</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>局域网屏幕共享demo</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+    background-color: white;
+    font-family: &quot;Microsoft YaHei&quot;;
+    color: #1f2329;
+}
+
+QLabel#labelMainScreen {
+    background-color: #f2f3f5;
+    border: 2px solid #dcdfe6;
+    border-radius: 14px;
+    color: #8a94a6;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+QLabel#labelSmall1,
+QLabel#labelSmall2,
+QLabel#labelSmall3,
+QLabel#labelSmall4,
+QLabel#labelSmall5 {
+    background-color: #ffffff;
+    border: 1px solid #dcdfe6;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #334155;
+}
+
+QLabel#labelStatus {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1f2329;
+}
+
+QPushButton {
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 120px;
+    min-height: 42px;
+}
+
+QPushButton#btnShare {
+    background-color: #1677ff;
+    color: white;
+}
+
+QPushButton#btnShare:hover {
+    background-color: #4096ff;
+}
+
+QPushButton#btnEnd {
+    background-color: #ff4d4f;
+    color: white;
+}
+
+QPushButton#btnEnd:hover {
+    background-color: #ff7875;
+}
+
+QPushButton#btnAnnotate {
+    background-color: #22c55e;
+    color: white;
+}
+
+QPushButton#btnAnnotate:hover {
+    background-color: #4ade80;
+}
+
+QPushButton#btnAnnotate:disabled {
+    background-color: #cbd5e1;
+    color: #64748b;
+}</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <widget class="QWidget" name="topUserArea" native="true">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>971</width>
+         <height>120</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>120</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>150</height>
+        </size>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="labelSmall1">
+          <property name="text">
+           <string>用户1</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSmall2">
+          <property name="text">
+           <string>用户2</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSmall3">
+          <property name="text">
+           <string>用户3</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSmall4">
+          <property name="text">
+           <string>用户4</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSmall5">
+          <property name="text">
+           <string>用户5</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QLabel" name="labelMainScreen">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>130</y>
+         <width>961</width>
+         <height>401</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>800</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="text">
+        <string>等待共享</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QWidget" name="bottomBar" native="true">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>550</y>
+         <width>971</width>
+         <height>80</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>70</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>80</height>
+        </size>
+       </property>
+       <widget class="QLabel" name="labelStatus">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>30</y>
+          <width>191</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>状态：未共享</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="btnShare">
+        <property name="geometry">
+         <rect>
+          <x>390</x>
+          <y>30</y>
+          <width>120</width>
+          <height>42</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>42</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>开始共享</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="btnEnd">
+        <property name="geometry">
+         <rect>
+          <x>590</x>
+          <y>30</y>
+          <width>120</width>
+          <height>42</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>42</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>结束共享</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="btnAnnotate">
+        <property name="geometry">
+         <rect>
+          <x>740</x>
+          <y>30</y>
+          <width>120</width>
+          <height>42</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>42</height>
+         </size>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>画笔</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1004</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

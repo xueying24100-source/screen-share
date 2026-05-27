@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SenderWindow</class>
+ <widget class="QWidget" name="SenderWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>984</width>
+    <height>473</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget {
+    background-color: white;
+    font-family: &quot;Microsoft YaHei&quot;;
+    color: #1f2329;
+}
+
+QWidget#leftPanel {
+    background-color: #f7f8fa;
+    border-right: 1px solid #e5e6eb;
+}
+
+QLabel#labelStatus {
+    font-size: 15px;
+    color: #333333;
+    font-weight: bold;
+}
+
+QPushButton {
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    min-height: 38px;
+}
+
+QPushButton#btnStartShare {
+    background-color: #1677ff;
+    color: white;
+}
+
+QPushButton#btnStopShare {
+    background-color: #ff4d4f;
+    color: white;
+}
+
+QPushButton#btnSetAnswer {
+    background-color: #52c41a;
+    color: white;
+}
+
+QTextEdit {
+    background-color: white;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+QLabel#labelPreviewTitle {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+QLabel#labelPreview {
+    background-color: #f2f3f5;
+    border: 2px solid #dcdfe6;
+    border-radius: 12px;
+    color: #8a94a6;
+    font-size: 18px;
+}</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QWidget" name="sender" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QWidget" name="LeftPanel" native="true">
+        <widget class="QWidget" name="leftPanel" native="true">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>0</y>
+           <width>341</width>
+           <height>451</height>
+          </rect>
+         </property>
+         <widget class="QTextEdit" name="editRemoteAnswer">
+          <property name="geometry">
+           <rect>
+            <x>200</x>
+            <y>220</y>
+            <width>120</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QTextEdit" name="editLocalOffer">
+          <property name="geometry">
+           <rect>
+            <x>200</x>
+            <y>120</y>
+            <width>120</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="btnStopShare">
+          <property name="geometry">
+           <rect>
+            <x>210</x>
+            <y>270</y>
+            <width>93</width>
+            <height>38</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>停止共享</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="btnStartShare">
+          <property name="geometry">
+           <rect>
+            <x>30</x>
+            <y>270</y>
+            <width>93</width>
+            <height>38</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>开始共享</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="labelStatus">
+          <property name="geometry">
+           <rect>
+            <x>110</x>
+            <y>20</y>
+            <width>141</width>
+            <height>41</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>状态：未开始共享</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="btnSetAnswer">
+          <property name="geometry">
+           <rect>
+            <x>100</x>
+            <y>340</y>
+            <width>141</width>
+            <height>51</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>设置接收端Answer</string>
+          </property>
+         </widget>
+         <widget class="QWidget" name="rightPanel" native="true">
+          <property name="geometry">
+           <rect>
+            <x>390</x>
+            <y>-1</y>
+            <width>461</width>
+            <height>431</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QLabel" name="labelOfferTitle">
+          <property name="geometry">
+           <rect>
+            <x>30</x>
+            <y>120</y>
+            <width>91</width>
+            <height>21</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>本地Offer SDP</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="labelAnswerTitle">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>220</y>
+            <width>131</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>接收端Answer SDP</string>
+          </property>
+         </widget>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="RightPanel" native="true">
+        <widget class="QLabel" name="labelPreviewTitle">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>20</y>
+           <width>131</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>本地屏幕预览</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="labelPreview">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>50</y>
+           <width>450</width>
+           <height>360</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>等待开始共享</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
