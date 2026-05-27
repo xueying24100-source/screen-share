@@ -14,6 +14,7 @@ set(SOURCES
     mainwindow.cpp
     annotationoverlay.cpp
     annotationwindow.cpp
+    wgctestwindow.cpp
     screencapturer.cpp
     wgcwindowcapturebackend.cpp
     sourceenumerator.cpp
@@ -26,6 +27,7 @@ set(HEADERS
     mainwindow.h
     annotationoverlay.h
     annotationwindow.h
+    wgctestwindow.h
     screencapturer.h
     wgcwindowcapturebackend.h
     sourceenumerator.h

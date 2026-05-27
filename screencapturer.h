@@ -71,6 +71,8 @@ private:
     int          m_blackFrameThreshold{4};
     bool         m_wgcFailed{false};
     qint64       m_frameIndex{0};
+    QImage       m_lastWgcFrame;
+    qint64       m_lastWgcFrameTimeMs{0};
 
 #ifdef Q_OS_WIN
     Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;
