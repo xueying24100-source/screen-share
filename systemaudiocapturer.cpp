@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QTimerEvent>
 
 #ifdef Q_OS_WIN
 #include <QMetaObject>
