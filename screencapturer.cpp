@@ -69,6 +69,8 @@ void ScreenCapturer::start(int fps)
     m_preserveModeForStart = false;
     m_paused = false;
     m_lastEmittedFrame = QImage{};
+    m_statsWindowStartMs = QDateTime::currentMSecsSinceEpoch();
+    m_statsWindowFrames = 0;
     int interval = (fps > 0) ? (1000 / fps) : 33;
     m_timer->start(interval);
     m_running = true;
@@ -125,6 +127,8 @@ void ScreenCapturer::stop()
     m_lastWgcFrameTimeMs = 0;
     m_paused = false;
     m_state = CaptureState::Stopped;
+    m_statsWindowStartMs = 0;
+    m_statsWindowFrames = 0;
     qDebug() << "[ScreenCapturer] stopped";
 }
 
@@ -149,7 +153,7 @@ void ScreenCapturer::captureFrame()
 {
     if (m_paused) {
         if (!m_lastEmittedFrame.isNull()) {
-            emit frameCaptured(m_lastEmittedFrame);
+            emitFrameWithStats(m_lastEmittedFrame, QStringLiteral("PausedReplay"), m_lastEmittedFrame.size());
         }
         return;
     }
@@ -207,8 +211,9 @@ void ScreenCapturer::captureFrame()
 
                     if (!m_wgcFailed) {
                         ++m_frameIndex;
-                        m_lastEmittedFrame = frame;
-                        emit frameCaptured(frame);
+                        emitFrameWithStats(frame,
+                                           QStringLiteral("WGC"),
+                                           m_wgcBackend->lastFrameSize());
 
                         CaptureFrameMetadata meta;
                         meta.sourceSize    = m_wgcBackend->lastFrameSize();
@@ -221,8 +226,7 @@ void ScreenCapturer::captureFrame()
                 } else {
                     const qint64 now = QDateTime::currentMSecsSinceEpoch();
                     if (!m_lastWgcFrame.isNull() && (now - m_lastWgcFrameTimeMs) <= 200) {
-                        m_lastEmittedFrame = m_lastWgcFrame;
-                        emit frameCaptured(m_lastWgcFrame);
+                        emitFrameWithStats(m_lastWgcFrame, QStringLiteral("WGC"), m_lastWgcFrame.size());
                     }
                     return;
                 }
@@ -412,8 +416,9 @@ bool ScreenCapturer::captureWithDXGI()
 
     QImage output = prepareOutputFrame(frame, m_outputSize);
     ++m_frameIndex;
-    m_lastEmittedFrame = output;
-    emit frameCaptured(output);
+    emitFrameWithStats(output,
+                       QStringLiteral("DXGI"),
+                       QSize(static_cast<int>(m_captureWidth), static_cast<int>(m_captureHeight)));
 
     CaptureFrameMetadata meta;
     meta.sourceSize = QSize(static_cast<int>(m_captureWidth), static_cast<int>(m_captureHeight));
@@ -527,8 +532,7 @@ void ScreenCapturer::captureWithGdiWindow()
     }
 
     ++m_frameIndex;
-    m_lastEmittedFrame = frame;
-    emit frameCaptured(frame);
+    emitFrameWithStats(frame, backendUsed, frame.size());
 
     CaptureFrameMetadata meta;
     meta.sourceSize     = frame.size();
@@ -679,8 +683,7 @@ void ScreenCapturer::captureWithGrabWindow()
     QImage frame = prepareOutputFrame(pixmap.toImage(), m_outputSize);
 
     ++m_frameIndex;
-    m_lastEmittedFrame = frame;
-    emit frameCaptured(frame);
+    emitFrameWithStats(frame, backendUsed, pixmap.size());
 
     CaptureFrameMetadata meta;
     meta.sourceSize = pixmap.size();
@@ -744,4 +747,28 @@ bool ScreenCapturer::pixmapLooksMostlyBlack(const QPixmap& pixmap) const
     }
 
     return (static_cast<double>(blackCount) / static_cast<double>(totalSamples)) > 0.92;
+}
+
+void ScreenCapturer::emitFrameWithStats(const QImage& frame, const QString& backendName, const QSize& sourceSize)
+{
+    m_lastEmittedFrame = frame;
+    emit frameCaptured(frame);
+
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    if (m_statsWindowStartMs <= 0) {
+        m_statsWindowStartMs = nowMs;
+        m_statsWindowFrames = 0;
+    }
+    ++m_statsWindowFrames;
+    const qint64 elapsedMs = nowMs - m_statsWindowStartMs;
+    if (elapsedMs >= 1000) {
+        const double fps = (elapsedMs > 0)
+                               ? (static_cast<double>(m_statsWindowFrames) * 1000.0 / static_cast<double>(elapsedMs))
+                               : 0.0;
+        qDebug() << "[ScreenCapturer] stats fps=" << fps
+                 << "backend=" << backendName
+                 << "source=" << sourceSize;
+        m_statsWindowStartMs = nowMs;
+        m_statsWindowFrames = 0;
+    }
 }

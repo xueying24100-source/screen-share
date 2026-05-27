@@ -55,6 +55,7 @@ public:
     bool canRedo() const { return !m_redoHistory.isEmpty(); }
     bool isEditingText() const { return m_textEditor != nullptr; }
     AnnotationTool currentTool() const { return m_currentTool; }
+    bool hasRenderableContent() const;
 
     QList<Stroke> strokes() const { return m_strokes; }
     QImage renderAnnotationsToImage(const QSize& targetSize) const;

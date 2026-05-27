@@ -1,5 +1,8 @@
 #include "audioplayer.h"
 
+#include <QDateTime>
+#include <QDebug>
+
 AudioPlayer::AudioPlayer(QObject* parent)
     : QObject(parent)
 {
@@ -51,10 +54,12 @@ void AudioPlayer::start(const QAudioFormat& format)
     }
 
     m_running = true;
+    qDebug() << "[AudioPlayer] start sr=" << format.sampleRate() << "ch=" << format.channelCount();
 }
 
 void AudioPlayer::stop()
 {
+    qDebug() << "[AudioPlayer] stop";
     if (m_audioSink) {
         m_audioSink->stop();
         delete m_audioSink;
@@ -66,6 +71,13 @@ void AudioPlayer::stop()
 
 void AudioPlayer::playData(const QByteArray& data)
 {
+    static qint64 s_lastPlayDataLogMs = 0;
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    if (s_lastPlayDataLogMs == 0 || (nowMs - s_lastPlayDataLogMs) >= 1000) {
+        s_lastPlayDataLogMs = nowMs;
+        qDebug() << "[AudioPlayer] playData bytes=" << data.size() << "running=" << m_running;
+    }
+
     if (!m_running || !m_audioDevice || data.isEmpty()) {
         return;
     }
