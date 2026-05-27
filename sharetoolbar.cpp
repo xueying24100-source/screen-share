@@ -1,9 +1,11 @@
 #include "sharetoolbar.h"
 
 #include <QEnterEvent>
+#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPushButton>
+#include <QSignalBlocker>
 
 ShareToolbar::ShareToolbar(QWidget* parent)
     : QWidget(parent)
@@ -16,12 +18,19 @@ ShareToolbar::ShareToolbar(QWidget* parent)
         "QWidget#shareToolbarRoot { background: #202430; border-radius: 10px; }"
         "QPushButton { color:#fff; background:transparent; border:none; padding:8px 10px; }"
         "QPushButton:hover { background:rgba(255,255,255,30); border-radius:6px; }"
+        "QCheckBox { color:#fff; spacing:6px; padding:8px 8px; }"
+        "QCheckBox::indicator { width:14px; height:14px; }"
+        "QCheckBox::indicator:unchecked { border:1px solid #99a1b3; background:transparent; border-radius:3px; }"
+        "QCheckBox::indicator:checked { border:1px solid #4da3ff; background:#4da3ff; border-radius:3px; }"
         "QPushButton#stopButton { color:#FF6B6B; }"));
 
     m_pauseButton = new QPushButton(this);
     m_annotationButton = new QPushButton(this);
     m_micButton = new QPushButton(this);
     m_systemAudioButton = new QPushButton(this);
+    m_localPlaybackCheck = new QCheckBox(QStringLiteral("🎧 本地回放"), this);
+    m_localPlaybackCheck->setToolTip(QStringLiteral("仅用于本地调试，外放会产生回声啸叫，请佩戴耳机"));
+    m_localPlaybackCheck->setChecked(false);
     m_backButton = new QPushButton(QStringLiteral("⛶ 回到主窗口"), this);
     m_stopButton = new QPushButton(QStringLiteral("⛔ 结束共享"), this);
     m_stopButton->setObjectName(QStringLiteral("stopButton"));
@@ -33,6 +42,7 @@ ShareToolbar::ShareToolbar(QWidget* parent)
     layout->addWidget(m_annotationButton);
     layout->addWidget(m_micButton);
     layout->addWidget(m_systemAudioButton);
+    layout->addWidget(m_localPlaybackCheck);
     layout->addWidget(m_backButton);
     layout->addWidget(m_stopButton);
 
@@ -56,6 +66,7 @@ ShareToolbar::ShareToolbar(QWidget* parent)
         refreshTexts();
         emit systemAudioToggled(m_systemAudioEnabled);
     });
+    connect(m_localPlaybackCheck, &QCheckBox::toggled, this, &ShareToolbar::localPlaybackToggled);
     connect(m_backButton, &QPushButton::clicked, this, &ShareToolbar::backRequested);
     connect(m_stopButton, &QPushButton::clicked, this, &ShareToolbar::stopRequested);
 
@@ -84,6 +95,15 @@ void ShareToolbar::setSystemAudioEnabled(bool enabled)
 {
     m_systemAudioEnabled = enabled;
     refreshTexts();
+}
+
+void ShareToolbar::setLocalPlaybackEnabled(bool enabled)
+{
+    if (!m_localPlaybackCheck) {
+        return;
+    }
+    const QSignalBlocker blocker(m_localPlaybackCheck);
+    m_localPlaybackCheck->setChecked(enabled);
 }
 
 void ShareToolbar::mousePressEvent(QMouseEvent* event)

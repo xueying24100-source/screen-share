@@ -2,6 +2,8 @@
 
 #include "annotationwindow.h"
 #include "audiocapturer.h"
+#include "audiomixer.h"
+#include "audioplayer.h"
 #include "localpreviewwindow.h"
 #include "screencapturer.h"
 #include "sender.h"
@@ -14,12 +16,15 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QMediaDevices>
 #include <QPainter>
 #include <QPushButton>
 #include <QScreen>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtGlobal>
+
+#include <cmath>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -28,12 +33,76 @@
 #include <Windows.h>
 #endif
 
+namespace {
+
+double calculateMicDbFs(const QByteArray& pcm)
+{
+    const int sampleCount = pcm.size() / static_cast<int>(sizeof(qint16));
+    if (sampleCount <= 0) {
+        return -90.0;
+    }
+
+    const auto* samples = reinterpret_cast<const qint16*>(pcm.constData());
+    double sumSquares = 0.0;
+    for (int i = 0; i < sampleCount; ++i) {
+        const double sample = static_cast<double>(samples[i]);
+        sumSquares += sample * sample;
+    }
+
+    const double rms = std::sqrt(sumSquares / sampleCount);
+    if (rms <= 0.0) {
+        return -90.0;
+    }
+
+    return 20.0 * std::log10(rms / 32768.0);
+}
+
+double calculateSystemDbFs(const QByteArray& pcm, int sampleRate, int channels)
+{
+    Q_UNUSED(sampleRate);
+    if (channels <= 0) {
+        return -90.0;
+    }
+
+    const int totalFloatCount = pcm.size() / static_cast<int>(sizeof(float));
+    if (totalFloatCount < channels) {
+        return -90.0;
+    }
+
+    const int frameCount = totalFloatCount / channels;
+    if (frameCount <= 0) {
+        return -90.0;
+    }
+
+    const auto* samples = reinterpret_cast<const float*>(pcm.constData());
+    double sumSquares = 0.0;
+    for (int frame = 0; frame < frameCount; ++frame) {
+        double mono = 0.0;
+        for (int ch = 0; ch < channels; ++ch) {
+            mono += samples[frame * channels + ch];
+        }
+        mono /= channels;
+        sumSquares += mono * mono;
+    }
+
+    const double rms = std::sqrt(sumSquares / frameCount);
+    if (rms <= 0.0) {
+        return -90.0;
+    }
+
+    return 20.0 * std::log10(rms);
+}
+
+} // namespace
+
 MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     : QMainWindow(parent)
     , m_capturer(new ScreenCapturer(this))
     , m_sender(new Sender(this))
     , m_audioCapturer(new AudioCapturer(this))
     , m_systemAudioCapturer(new SystemAudioCapturer(this))
+    , m_audioMixer(new AudioMixer(this))
+    , m_localPlayback(new AudioPlayer(this))
     , m_toolbar(new ShareToolbar())
     , m_windowFollowTimer(new QTimer(this))
     , m_previewRefreshTimer(new QTimer(this))
@@ -141,10 +210,39 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     });
     connect(m_capturer, &ScreenCapturer::captureError, this, &MeetingMainWindow::handleCaptureError);
     connect(m_audioCapturer, &AudioCapturer::audioDataReady, m_sender, &Sender::onAudioDataReady);
+    connect(m_audioCapturer, &AudioCapturer::audioDataReady, m_audioMixer, &AudioMixer::pushMicPcm);
+    connect(m_audioCapturer, &AudioCapturer::audioDataReady, this, [this](const QByteArray& pcm) {
+        if (m_preview) {
+            m_preview->updateMicLevel(calculateMicDbFs(pcm));
+        }
+    });
     connect(m_systemAudioCapturer, &SystemAudioCapturer::systemAudioDataReady, this,
-            [this](const QByteArray& pcm, int, int) {
+            [this](const QByteArray& pcm, int sampleRate, int channels) {
                 m_sender->onAudioDataReady(pcm);
+                m_audioMixer->pushSystemPcm(pcm, sampleRate, channels);
+                if (m_preview) {
+                    m_preview->updateSystemLevel(calculateSystemDbFs(pcm, sampleRate, channels));
+                }
             });
+    connect(m_audioMixer, &AudioMixer::mixedAudioReady, this, &MeetingMainWindow::onMixedAudio);
+    connect(m_toolbar, &ShareToolbar::localPlaybackToggled, this, [this](bool enabled) {
+        if (enabled) {
+            if (!m_localPlaybackWarningShown) {
+                QMessageBox::warning(this,
+                                     QStringLiteral("本地回放警告"),
+                                     QStringLiteral("外放扬声器会产生回声/啸叫，请佩戴耳机使用。"));
+                m_localPlaybackWarningShown = true;
+            }
+            QAudioFormat format;
+            format.setSampleRate(16000);
+            format.setChannelCount(1);
+            format.setSampleFormat(QAudioFormat::Int16);
+            m_localPlayback->start(format);
+            return;
+        }
+
+        m_localPlayback->stop();
+    });
 
     static DebugTransport s_debugTransport;
     m_sender->setTransport(&s_debugTransport);
@@ -166,6 +264,14 @@ MeetingMainWindow::~MeetingMainWindow()
     if (m_preview) {
         delete m_preview;
         m_preview = nullptr;
+    }
+    if (m_localPlayback) {
+        delete m_localPlayback;
+        m_localPlayback = nullptr;
+    }
+    if (m_audioMixer) {
+        delete m_audioMixer;
+        m_audioMixer = nullptr;
     }
 }
 
@@ -220,6 +326,13 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
 
         m_audioCapturer->start();
         m_systemAudioCapturer->setEnabled(selection.includeSystemAudio);
+        m_audioMixer->reset();
+        if (m_preview) {
+            m_preview->setDeviceLabels(QMediaDevices::defaultAudioInput().description(),
+                                       QMediaDevices::defaultAudioOutput().description());
+            m_preview->updateMicLevel(-90.0);
+            m_preview->updateSystemLevel(-90.0);
+        }
 
         applyAnnotationGeometry();
 
@@ -254,6 +367,8 @@ void MeetingMainWindow::stopSharing()
     m_capturer->stop();
     m_audioCapturer->stop();
     m_systemAudioCapturer->setEnabled(false);
+    m_localPlayback->stop();
+    m_audioMixer->reset();
 
     if (m_annotationWindow) {
         disconnect(m_annotationWindow, nullptr, this, nullptr);
@@ -263,6 +378,7 @@ void MeetingMainWindow::stopSharing()
         m_toolbar->setAnnotationEnabled(false);
     }
     if (m_toolbar) {
+        m_toolbar->setLocalPlaybackEnabled(false);
         m_toolbar->hide();
     }
     if (m_preview) {
@@ -409,6 +525,14 @@ QImage MeetingMainWindow::composeFrameWithAnnotations(const QImage& frame) const
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.drawImage(0, 0, layer);
     return composed;
+}
+
+void MeetingMainWindow::onMixedAudio(const QByteArray& pcm)
+{
+    if (!m_localPlayback || !m_localPlayback->isRunning()) {
+        return;
+    }
+    m_localPlayback->playData(pcm);
 }
 
 void MeetingMainWindow::applyAnnotationGeometry()

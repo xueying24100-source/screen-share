@@ -24,6 +24,7 @@ set(SOURCES
     sourceenumerator.cpp
     audiocapturer.cpp
     systemaudiocapturer.cpp
+    audiomixer.cpp
     audioplayer.cpp
     sender.cpp
 )
@@ -42,6 +43,7 @@ set(HEADERS
     sourceenumerator.h
     audiocapturer.h
     systemaudiocapturer.h
+    audiomixer.h
     audioplayer.h
     sender.h
 )

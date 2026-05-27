@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QByteArray>
 #include <QImage>
 #include <QString>
 
@@ -8,6 +9,8 @@
 
 class AnnotationWindow;
 class AudioCapturer;
+class AudioMixer;
+class AudioPlayer;
 class LocalPreviewWindow;
 class QPushButton;
 class QTimer;
@@ -34,11 +37,14 @@ private:
     void onFrameCaptured(const QImage& frame);
     void refreshPreviewComposite();
     QImage composeFrameWithAnnotations(const QImage& frame) const;
+    void onMixedAudio(const QByteArray& pcm);
 
     ScreenCapturer* m_capturer{nullptr};
     Sender* m_sender{nullptr};
     AudioCapturer* m_audioCapturer{nullptr};
     SystemAudioCapturer* m_systemAudioCapturer{nullptr};
+    AudioMixer* m_audioMixer{nullptr};
+    AudioPlayer* m_localPlayback{nullptr};
     AnnotationWindow* m_annotationWindow{nullptr};
     LocalPreviewWindow* m_preview{nullptr};
     ShareToolbar* m_toolbar{nullptr};
@@ -54,4 +60,5 @@ private:
     QString m_lastCaptureError;
     ShareSelection m_currentSelection;
     QImage m_lastRawFrame;
+    bool m_localPlaybackWarningShown{false};
 };

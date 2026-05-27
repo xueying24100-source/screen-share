@@ -1,11 +1,85 @@
 #include "localpreviewwindow.h"
 
 #include <QDateTime>
+#include <QPainter>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPixmap>
 #include <QResizeEvent>
 #include <QVBoxLayout>
+#include <QtGlobal>
+
+#include <cmath>
+
+namespace {
+
+class VolumeBar : public QWidget
+{
+public:
+    explicit VolumeBar(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setFixedHeight(9);
+        setMinimumWidth(120);
+    }
+
+    void setLevelDbFs(double db)
+    {
+        m_db = qBound(-60.0, db, 0.0);
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        QWidget::paintEvent(event);
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+
+        const QRectF frameRect = rect().adjusted(0.5, 0.5, -0.5, -0.5);
+        painter.setPen(QColor(75, 83, 98));
+        painter.setBrush(QColor(26, 30, 40));
+        painter.drawRoundedRect(frameRect, 4.0, 4.0);
+
+        const double ratio = (m_db + 60.0) / 60.0;
+        const double fillWidth = qMax(0.0, (frameRect.width() - 2.0) * ratio);
+        if (fillWidth <= 0.0) {
+            return;
+        }
+
+        QColor color(56, 197, 117);
+        if (m_db >= -6.0) {
+            color = QColor(255, 82, 82);
+        } else if (m_db >= -20.0) {
+            color = QColor(244, 196, 48);
+        }
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawRoundedRect(QRectF(frameRect.left() + 1.0, frameRect.top() + 1.0, fillWidth, frameRect.height() - 2.0), 3.0, 3.0);
+    }
+
+private:
+    double m_db{-60.0};
+};
+
+double clampDb(double db)
+{
+    if (!std::isfinite(db)) {
+        return -60.0;
+    }
+    return qBound(-60.0, db, 0.0);
+}
+
+QString dbLabelText(double db)
+{
+    if (db <= -89.0) {
+        return QStringLiteral("-inf dBFS");
+    }
+    return QStringLiteral("%1 dBFS").arg(qRound(db));
+}
+
+} // namespace
 
 LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
     : QWidget(parent)
@@ -43,8 +117,46 @@ LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
 
     layout->addWidget(m_previewLabel, 1);
     layout->addWidget(m_statusLabel);
+
+    auto* volumeRootLayout = new QVBoxLayout();
+    volumeRootLayout->setSpacing(4);
+    volumeRootLayout->setContentsMargins(0, 2, 0, 0);
+
+    auto* micRow = new QHBoxLayout();
+    micRow->setSpacing(8);
+    auto* micTitle = new QLabel(QStringLiteral("Mic"), this);
+    micTitle->setFixedWidth(52);
+    m_micVolumeBar = new VolumeBar(this);
+    m_micDbLabel = new QLabel(QStringLiteral("-inf dBFS"), this);
+    m_micDbLabel->setFixedWidth(74);
+    m_micDeviceLabel = new QLabel(QStringLiteral("(默认输入设备)"), this);
+    m_micDeviceLabel->setStyleSheet(QStringLiteral("color:#9aa4b2;font-size:12px;"));
+    micRow->addWidget(micTitle);
+    micRow->addWidget(m_micVolumeBar, 1);
+    micRow->addWidget(m_micDbLabel);
+    micRow->addWidget(m_micDeviceLabel);
+
+    auto* systemRow = new QHBoxLayout();
+    systemRow->setSpacing(8);
+    auto* systemTitle = new QLabel(QStringLiteral("System"), this);
+    systemTitle->setFixedWidth(52);
+    m_systemVolumeBar = new VolumeBar(this);
+    m_systemDbLabel = new QLabel(QStringLiteral("-inf dBFS"), this);
+    m_systemDbLabel->setFixedWidth(74);
+    m_systemDeviceLabel = new QLabel(QStringLiteral("(默认输出设备)"), this);
+    m_systemDeviceLabel->setStyleSheet(QStringLiteral("color:#9aa4b2;font-size:12px;"));
+    systemRow->addWidget(systemTitle);
+    systemRow->addWidget(m_systemVolumeBar, 1);
+    systemRow->addWidget(m_systemDbLabel);
+    systemRow->addWidget(m_systemDeviceLabel);
+
+    volumeRootLayout->addLayout(micRow);
+    volumeRootLayout->addLayout(systemRow);
+    layout->addLayout(volumeRootLayout);
     layout->addWidget(m_errorLabel);
 
+    updateMicLevel(-90.0);
+    updateSystemLevel(-90.0);
     refreshStatusText();
 }
 
@@ -92,6 +204,40 @@ void LocalPreviewWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     refreshPreviewPixmap();
+}
+
+void LocalPreviewWindow::updateMicLevel(double dbfs)
+{
+    m_smoothedMicDb = (m_smoothedMicDb * 0.6) + (dbfs * 0.4);
+    const double clamped = clampDb(m_smoothedMicDb);
+    if (m_micVolumeBar) {
+        static_cast<VolumeBar*>(m_micVolumeBar)->setLevelDbFs(clamped);
+    }
+    if (m_micDbLabel) {
+        m_micDbLabel->setText(dbLabelText(m_smoothedMicDb));
+    }
+}
+
+void LocalPreviewWindow::updateSystemLevel(double dbfs)
+{
+    m_smoothedSystemDb = (m_smoothedSystemDb * 0.6) + (dbfs * 0.4);
+    const double clamped = clampDb(m_smoothedSystemDb);
+    if (m_systemVolumeBar) {
+        static_cast<VolumeBar*>(m_systemVolumeBar)->setLevelDbFs(clamped);
+    }
+    if (m_systemDbLabel) {
+        m_systemDbLabel->setText(dbLabelText(m_smoothedSystemDb));
+    }
+}
+
+void LocalPreviewWindow::setDeviceLabels(const QString& micName, const QString& outName)
+{
+    if (m_micDeviceLabel) {
+        m_micDeviceLabel->setText(QStringLiteral("(%1)").arg(micName.isEmpty() ? QStringLiteral("默认输入设备") : micName));
+    }
+    if (m_systemDeviceLabel) {
+        m_systemDeviceLabel->setText(QStringLiteral("(%1)").arg(outName.isEmpty() ? QStringLiteral("默认输出设备") : outName));
+    }
 }
 
 void LocalPreviewWindow::refreshPreviewPixmap()
