@@ -16,6 +16,8 @@ qt_add_executable(qtproject_screenshare
     receiverwindow.h receiverwindow.cpp receiverwindow.ui
     annotationoverlay.h annotationoverlay.cpp
     annotationwindow.h annotationwindow.cpp
+    sourceenumerator.h sourceenumerator.cpp
+    screencapturer.h screencapturer.cpp
 )
 
 qt_add_translations(
@@ -34,6 +36,8 @@ if(WIN32)
     target_link_libraries(qtproject_screenshare
         PRIVATE
             user32
+            d3d11
+            dxgi
     )
 endif()
 

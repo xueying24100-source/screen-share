@@ -29,73 +29,6 @@
 #include <windows.h>
 #endif
 
-namespace {
-#ifdef Q_OS_WIN
-struct EnumWindowContext
-{
-    QList<MainWindow::WindowItem> *items = nullptr;
-};
-
-BOOL CALLBACK enumCapturableWindows(HWND hwnd, LPARAM lParam)
-{
-    auto *ctx = reinterpret_cast<EnumWindowContext*>(lParam);
-    if (!ctx || !ctx->items) {
-        return TRUE;
-    }
-
-    if (!IsWindowVisible(hwnd)) {
-        return TRUE;
-    }
-
-    // 过滤掉工具窗口、无标题窗口、子窗口，尽量接近任务栏里能看到的窗口。
-    if (GetAncestor(hwnd, GA_ROOT) != hwnd) {
-        return TRUE;
-    }
-
-    const LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    if (exStyle & WS_EX_TOOLWINDOW) {
-        return TRUE;
-    }
-
-    const int titleLen = GetWindowTextLengthW(hwnd);
-    if (titleLen <= 0) {
-        return TRUE;
-    }
-
-    wchar_t titleBuffer[512] = {0};
-    GetWindowTextW(hwnd, titleBuffer, 511);
-    QString title = QString::fromWCharArray(titleBuffer).trimmed();
-    if (title.isEmpty()) {
-        return TRUE;
-    }
-
-    // 排除一些系统外壳窗口，避免列表太乱。
-    if (title == QStringLiteral("Program Manager") ||
-        title == QStringLiteral("Windows 输入体验") ||
-        title == QStringLiteral("Windows Input Experience")) {
-        return TRUE;
-    }
-
-    RECT rect{};
-    GetWindowRect(hwnd, &rect);
-    const int width = rect.right - rect.left;
-    const int height = rect.bottom - rect.top;
-    const bool minimized = IsIconic(hwnd);
-    if (!minimized && (width < 120 || height < 80)) {
-        return TRUE;
-    }
-
-    MainWindow::WindowItem item;
-    item.handle = reinterpret_cast<quintptr>(hwnd);
-    item.title = title;
-    item.minimized = minimized;
-    ctx->items->append(item);
-
-    return TRUE;
-}
-#endif
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -130,6 +63,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(shareTimer, &QTimer::timeout,
             this, &MainWindow::captureScreen);
+
+    screenCapturer = new ScreenCapturer(this);
+    connect(screenCapturer, &ScreenCapturer::frameCaptured,
+            this, [this](const QImage &frame) {
+        if (!sharing || currentShareType == ShareSourceType::Whiteboard) {
+            return;
+        }
+        QPixmap pixmap = QPixmap::fromImage(frame);
+        pixmap = composeAnnotationOnPixmap(pixmap);
+        ui->labelMainScreen->setStyleSheet("");
+        updatePreviewWithPixmap(pixmap);
+    });
+    connect(screenCapturer, &ScreenCapturer::captureError,
+            this, [this](const QString &msg) {
+        ui->labelStatus->setText("状态：捕获错误 - " + msg);
+    });
 }
 
 MainWindow::~MainWindow()
@@ -289,10 +238,10 @@ void MainWindow::refreshSharePopupOptions()
 
     clearWindowButtons();
 
-    QList<WindowItem> windows = listOpenWindows();
+    QList<WindowInfo> windows = SourceEnumerator::enumerateWindows();
     const int maxWindowButtons = 6;
     int count = 0;
-    for (const WindowItem &item : windows) {
+    for (const WindowInfo &item : windows) {
         if (count >= maxWindowButtons) {
             break;
         }
@@ -349,22 +298,6 @@ void MainWindow::clearWindowButtons()
         btn->deleteLater();
     }
     windowSourceButtons.clear();
-}
-
-QList<MainWindow::WindowItem> MainWindow::listOpenWindows() const
-{
-    QList<WindowItem> items;
-
-#ifdef Q_OS_WIN
-    EnumWindowContext ctx;
-    ctx.items = &items;
-    EnumWindows(enumCapturableWindows, reinterpret_cast<LPARAM>(&ctx));
-#else
-    // Qt 本身没有跨平台枚举所有外部应用窗口的接口。
-    // Windows 版本用 Win32 EnumWindows 实现，其他平台这里先返回空列表。
-#endif
-
-    return items;
 }
 
 QString MainWindow::shortWindowTitle(const QString &title, int maxLen) const
@@ -449,6 +382,9 @@ void MainWindow::startShareScreen(int screenIndex)
     if (shareTimer) {
         shareTimer->stop();
     }
+    if (screenCapturer) {
+        screenCapturer->stop();
+    }
 
     sharing = true;
     currentShareType = ShareSourceType::Screen;
@@ -462,8 +398,7 @@ void MainWindow::startShareScreen(int screenIndex)
     ui->btnAnnotate->setEnabled(true);
     ui->btnAnnotate->setText("画笔");
 
-    shareTimer->start();
-    captureScreen();
+    screenCapturer->startScreen(screenIndex, 10);
 }
 
 void MainWindow::startShareWhiteboard()
@@ -523,6 +458,9 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
     if (shareTimer) {
         shareTimer->stop();
     }
+    if (screenCapturer) {
+        screenCapturer->stop();
+    }
 
     sharing = true;
     currentShareType = ShareSourceType::Window;
@@ -536,8 +474,7 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
     ui->btnAnnotate->setEnabled(true);
     ui->btnAnnotate->setText("画笔");
 
-    shareTimer->start();
-    captureScreen();
+    screenCapturer->startWindow(windowHandle, 10);
 }
 
 void MainWindow::onSelectDesktop1()
@@ -1033,52 +970,16 @@ void MainWindow::captureScreen()
         return;
     }
 
-    QPixmap pixmap;
-
-    if (currentShareType == ShareSourceType::Screen) {
-        const QList<QScreen*> screens = QGuiApplication::screens();
-        if (currentScreenIndex < 0 || currentScreenIndex >= screens.size()) {
-            ui->labelStatus->setText("状态：扩展屏已断开");
-            return;
-        }
-
-        QScreen *screen = screens.at(currentScreenIndex);
-        if (!screen) {
-            return;
-        }
-        pixmap = screen->grabWindow(0);
-    } else if (currentShareType == ShareSourceType::Window) {
-        if (currentWindowHandle == 0) {
-            return;
-        }
-
-#ifdef Q_OS_WIN
-        HWND hwnd = reinterpret_cast<HWND>(currentWindowHandle);
-        if (!IsWindow(hwnd)) {
-            ui->labelStatus->setText("状态：共享窗口已关闭");
-            return;
-        }
-#endif
-
-        pixmap = captureWindowPixmap(currentWindowHandle);
-    }
-
-    if (pixmap.isNull()) {
-        ui->labelMainScreen->clear();
-        ui->labelMainScreen->setText("暂时无法获取共享画面");
-        return;
-    }
-
-    pixmap = composeAnnotationOnPixmap(pixmap);
-
-    ui->labelMainScreen->setStyleSheet("");
-    updatePreviewWithPixmap(pixmap);
+    // Screen 和 Window 模式由 ScreenCapturer 持续推帧，captureScreen() 不再抓图。
 }
 
 void MainWindow::endShare()
 {
     if (shareTimer) {
         shareTimer->stop();
+    }
+    if (screenCapturer) {
+        screenCapturer->stop();
     }
 
     if (sharePopup) {
