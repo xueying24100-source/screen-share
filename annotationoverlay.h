@@ -78,6 +78,9 @@ signals:
     void undoRedoChanged();
     void textAnnotationCreated(const TextAnnotation& text);
     void toolChanged(AnnotationTool tool);
+    // Emitted when the user requests to close/exit annotation mode (e.g. Esc key).
+    // Owners (MeetingMainWindow) should hide the overlay and update toolbar state.
+    void closeRequested();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -85,6 +88,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
