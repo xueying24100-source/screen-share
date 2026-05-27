@@ -21,6 +21,13 @@
 #endif
 #endif
 
+namespace {
+QString windowCaptureUnavailableMessage()
+{
+    return QStringLiteral("无法捕获该窗口的内容；该窗口可能被其它窗口遮挡、最小化或受 DRM 保护");
+}
+}
+
 ScreenCapturer::ScreenCapturer(QObject* parent)
     : QObject(parent)
     , m_timer(new QTimer(this))
@@ -70,6 +77,17 @@ void ScreenCapturer::startWindow(quintptr windowId, int fps)
     if (m_running) {
         stop();
     }
+#ifdef Q_OS_WIN
+    const HWND hwnd = reinterpret_cast<HWND>(windowId);
+    if (!hwnd || !IsWindow(hwnd)) {
+        emit captureError(QStringLiteral("Invalid window handle"));
+        return;
+    }
+    if (IsIconic(hwnd)) {
+        emit captureError(windowCaptureUnavailableMessage());
+        return;
+    }
+#endif
     m_captureMode = CaptureMode::Window;
     m_windowHandle = windowId;
     m_preserveModeForStart = true;
@@ -130,6 +148,10 @@ void ScreenCapturer::captureFrame()
             stop();
             return;
         }
+        if (IsIconic(hwnd)) {
+            emit captureError(windowCaptureUnavailableMessage());
+            return;
+        }
 
         // WGC 主路径
         if (!m_wgcFailed && WgcWindowCaptureBackend::isSupported()) {
@@ -139,6 +161,7 @@ void ScreenCapturer::captureFrame()
                 m_wgcBackend->setBorderRequired(m_wgcBorderRequired);
                 m_wgcBackend->setMinUpdateInterval(m_wgcMinUpdateIntervalMs);
                 if (!m_wgcBackend->start(hwnd)) {
+                    emit captureError(QStringLiteral("WGC 启动失败，已降级到 GDI 捕获"));
                     qDebug() << "[ScreenCapturer] WGC start failed, fallback to GDI";
                     m_wgcFailed = true;
                 } else {
@@ -156,6 +179,7 @@ void ScreenCapturer::captureFrame()
                     if (pixmapLooksMostlyBlack(tmp)) {
                         ++m_blackFrameCount;
                         if (m_blackFrameCount >= m_blackFrameThreshold) {
+                            emit captureError(QStringLiteral("WGC 连续黑帧，已降级到 GDI 捕获"));
                             qDebug() << "[ScreenCapturer] WGC consecutive black frames, fallback to GDI";
                             m_wgcFailed = true;
                             m_wgcBackend->stop();
@@ -373,8 +397,20 @@ bool ScreenCapturer::captureWithDXGI()
 
     QImage output = frame.scaled(m_outputSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
                          .convertToFormat(QImage::Format_RGB32);
+    ++m_frameIndex;
     m_lastEmittedFrame = output;
     emit frameCaptured(output);
+
+    CaptureFrameMetadata meta;
+    meta.sourceSize = QSize(static_cast<int>(m_captureWidth), static_cast<int>(m_captureHeight));
+    if (m_captureMode == CaptureMode::IndexedScreen && m_screenIndex >= 0 && m_screenIndex < screens.size()) {
+        meta.sourceGeometry = screens.at(m_screenIndex)->geometry();
+    } else if (QScreen* primary = QGuiApplication::primaryScreen()) {
+        meta.sourceGeometry = primary->geometry();
+    }
+    meta.backendName = QStringLiteral("DXGI");
+    meta.frameIndex = m_frameIndex;
+    emit frameMetadataChanged(meta);
     return true;
 #else
     return false;
@@ -387,6 +423,10 @@ void ScreenCapturer::captureWithGdiWindow()
     HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
     if (!hwnd || !IsWindow(hwnd)) {
         emit captureError(QStringLiteral("Invalid window handle"));
+        return;
+    }
+    if (IsIconic(hwnd)) {
+        emit captureError(windowCaptureUnavailableMessage());
         return;
     }
 
@@ -457,19 +497,11 @@ void ScreenCapturer::captureWithGdiWindow()
         pixmap = captureFromDC(false);
         if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
             backendUsed = QStringLiteral("BitBlt");
-        } else {
-            const QPoint center((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
-            QScreen* screen = QGuiApplication::screenAt(center);
-            if (!screen) screen = QGuiApplication::primaryScreen();
-            if (screen) {
-                pixmap = screen->grabWindow(0, rect.left, rect.top, width, height);
-                backendUsed = QStringLiteral("ScreenCrop");
-            }
         }
     }
 
-    if (pixmap.isNull()) {
-        emit captureError(QStringLiteral("GDI capture returned null pixmap"));
+    if (pixmap.isNull() || pixmapLooksMostlyBlack(pixmap)) {
+        emit captureError(windowCaptureUnavailableMessage());
         return;
     }
 
@@ -497,6 +529,7 @@ void ScreenCapturer::captureWithGdiWindow()
 void ScreenCapturer::captureWithGrabWindow()
 {
     QPixmap pixmap;
+    QString backendUsed = QStringLiteral("GrabWindow");
 
     if (m_captureMode == CaptureMode::PrimaryScreen) {
         QScreen* screen = QGuiApplication::primaryScreen();
@@ -522,6 +555,10 @@ void ScreenCapturer::captureWithGrabWindow()
         HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
         if (!hwnd || !IsWindow(hwnd)) {
             emit captureError(QStringLiteral("Invalid window handle"));
+            return;
+        }
+        if (IsIconic(hwnd)) {
+            emit captureError(windowCaptureUnavailableMessage());
             return;
         }
 
@@ -598,18 +635,17 @@ void ScreenCapturer::captureWithGrabWindow()
         };
 
         pixmap = captureFromDC(true);
-        if (pixmap.isNull() || pixmapLooksMostlyBlack(pixmap)) {
+        if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+            backendUsed = QStringLiteral("PrintWindow");
+        } else {
             pixmap = captureFromDC(false);
+            if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+                backendUsed = QStringLiteral("BitBlt");
+            }
         }
         if (pixmap.isNull() || pixmapLooksMostlyBlack(pixmap)) {
-            const QPoint center((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
-            QScreen* screen = QGuiApplication::screenAt(center);
-            if (!screen) {
-                screen = QGuiApplication::primaryScreen();
-            }
-            if (screen) {
-                pixmap = screen->grabWindow(0, rect.left, rect.top, width, height);
-            }
+            emit captureError(windowCaptureUnavailableMessage());
+            return;
         }
 #else
         QScreen* screen = QGuiApplication::primaryScreen();
@@ -632,8 +668,38 @@ void ScreenCapturer::captureWithGrabWindow()
                                  Qt::SmoothTransformation)
                          .convertToFormat(QImage::Format_RGB32);
 
+    ++m_frameIndex;
     m_lastEmittedFrame = frame;
     emit frameCaptured(frame);
+
+    CaptureFrameMetadata meta;
+    meta.sourceSize = pixmap.size();
+    if (m_captureMode == CaptureMode::PrimaryScreen) {
+        if (QScreen* primary = QGuiApplication::primaryScreen()) {
+            meta.sourceGeometry = primary->geometry();
+        }
+        meta.backendName = QStringLiteral("GrabWindow");
+    } else if (m_captureMode == CaptureMode::IndexedScreen) {
+        const QList<QScreen*> screens = QGuiApplication::screens();
+        if (m_screenIndex >= 0 && m_screenIndex < screens.size() && screens.at(m_screenIndex)) {
+            meta.sourceGeometry = screens.at(m_screenIndex)->geometry();
+        }
+        meta.backendName = QStringLiteral("GrabWindow");
+    } else {
+#ifdef Q_OS_WIN
+        RECT rect{};
+        const HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
+        if (hwnd && GetWindowRect(hwnd, &rect)) {
+            meta.sourceGeometry = QRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+        }
+        meta.windowHandle = m_windowHandle;
+        meta.backendName = backendUsed;
+#else
+        meta.backendName = QStringLiteral("GrabWindow");
+#endif
+    }
+    meta.frameIndex = m_frameIndex;
+    emit frameMetadataChanged(meta);
 }
 
 bool ScreenCapturer::pixmapLooksMostlyBlack(const QPixmap& pixmap) const

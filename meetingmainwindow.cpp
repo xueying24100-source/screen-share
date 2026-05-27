@@ -2,15 +2,18 @@
 
 #include "annotationwindow.h"
 #include "audiocapturer.h"
+#include "localpreviewwindow.h"
 #include "screencapturer.h"
 #include "sender.h"
 #include "sharetoolbar.h"
 #include "systemaudiocapturer.h"
 
+#include <QApplication>
 #include <QGuiApplication>
 #include <QDialog>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QScreen>
 #include <QTimer>
@@ -117,6 +120,18 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
 
     connect(m_capturer, &ScreenCapturer::frameCaptured, m_sender, &Sender::onMainScreenFrameCaptured);
+    connect(m_capturer, &ScreenCapturer::frameCaptured, this, [this](const QImage& frame) {
+        m_lastCaptureError.clear();
+        if (m_preview) {
+            m_preview->updateFrame(frame);
+        }
+    });
+    connect(m_capturer, &ScreenCapturer::frameMetadataChanged, this, [this](const CaptureFrameMetadata& meta) {
+        if (m_preview) {
+            m_preview->updateMetadata(meta);
+        }
+    });
+    connect(m_capturer, &ScreenCapturer::captureError, this, &MeetingMainWindow::handleCaptureError);
     connect(m_audioCapturer, &AudioCapturer::audioDataReady, m_sender, &Sender::onAudioDataReady);
     connect(m_systemAudioCapturer, &SystemAudioCapturer::systemAudioDataReady, this,
             [this](const QByteArray& pcm, int, int) {
@@ -140,49 +155,85 @@ MeetingMainWindow::~MeetingMainWindow()
         delete m_annotationWindow;
         m_annotationWindow = nullptr;
     }
+    if (m_preview) {
+        delete m_preview;
+        m_preview = nullptr;
+    }
 }
 
 void MeetingMainWindow::startSharing(const ShareSelection& selection)
 {
-    if (m_sharing) {
+    if (m_sharing || m_shareStartPending) {
         stopSharing();
     }
 
     m_currentSelection = selection;
     m_capturer->setWgcOptions(selection.includeCursor, selection.showBorder, 8);
+    m_lastCaptureError.clear();
+    m_shareStartPending = true;
+    const int requestId = ++m_shareStartRequestId;
 
-    if (selection.kind == ShareSelection::Kind::Window) {
-        m_capturer->startWindow(selection.hwnd, selection.fps);
-        m_windowFollowTimer->start(30);
-    } else {
-        m_capturer->startScreen(selection.screenIndex, selection.fps);
-        m_windowFollowTimer->stop();
-    }
-
-    m_audioCapturer->start();
-    m_systemAudioCapturer->setEnabled(selection.includeSystemAudio);
-
-    applyAnnotationGeometry();
-
-    m_toolbar->setPaused(false);
-    m_toolbar->setAnnotationEnabled(false);
-    m_toolbar->setMicMuted(false);
-    m_toolbar->setSystemAudioEnabled(selection.includeSystemAudio);
-    updateToolbarPosition();
-    m_toolbar->show();
-    m_toolbar->raise();
-
-    m_sharing = true;
-    m_endButton->setEnabled(true);
     hide();
+    QApplication::processEvents();
+
+    QTimer::singleShot(150, this, [this, selection, requestId]() {
+        if (!m_shareStartPending || requestId != m_shareStartRequestId) {
+            return;
+        }
+
+        ensurePreviewWindow();
+
+        if (selection.kind == ShareSelection::Kind::Window) {
+            m_capturer->startWindow(selection.hwnd, selection.fps);
+            if (m_capturer->isRunning()) {
+                m_windowFollowTimer->start(30);
+            } else {
+                m_windowFollowTimer->stop();
+            }
+        } else {
+            m_capturer->startScreen(selection.screenIndex, selection.fps);
+            m_windowFollowTimer->stop();
+        }
+
+        if (!m_capturer->isRunning()) {
+            m_shareStartPending = false;
+            showNormal();
+            raise();
+            activateWindow();
+            return;
+        }
+
+        m_audioCapturer->start();
+        m_systemAudioCapturer->setEnabled(selection.includeSystemAudio);
+
+        applyAnnotationGeometry();
+
+        m_toolbar->setPaused(false);
+        m_toolbar->setAnnotationEnabled(false);
+        m_toolbar->setMicMuted(false);
+        m_toolbar->setSystemAudioEnabled(selection.includeSystemAudio);
+        updateToolbarPosition();
+        m_toolbar->show();
+        m_toolbar->raise();
+
+        updatePreviewPosition();
+        m_preview->show();
+        m_preview->raise();
+
+        m_sharing = true;
+        m_shareStartPending = false;
+        m_endButton->setEnabled(true);
+    });
 }
 
 void MeetingMainWindow::stopSharing()
 {
-    if (!m_sharing) {
+    if (!m_sharing && !m_shareStartPending && !m_preview) {
         return;
     }
 
+    ++m_shareStartRequestId;
+    m_shareStartPending = false;
     m_windowFollowTimer->stop();
     m_capturer->stop();
     m_audioCapturer->stop();
@@ -198,8 +249,14 @@ void MeetingMainWindow::stopSharing()
     if (m_toolbar) {
         m_toolbar->hide();
     }
+    if (m_preview) {
+        m_preview->hide();
+        m_preview->deleteLater();
+        m_preview = nullptr;
+    }
 
     m_sharing = false;
+    m_lastCaptureError.clear();
     m_endButton->setEnabled(false);
     showNormal();
     raise();
@@ -226,6 +283,77 @@ void MeetingMainWindow::updateToolbarPosition()
     const QRect g = screen->availableGeometry();
     m_toolbar->adjustSize();
     m_toolbar->move(g.left() + (g.width() - m_toolbar->width()) / 2, g.top() + 12);
+}
+
+void MeetingMainWindow::ensurePreviewWindow()
+{
+    if (m_preview) {
+        return;
+    }
+
+    m_preview = new LocalPreviewWindow();
+}
+
+void MeetingMainWindow::updatePreviewPosition()
+{
+    if (!m_preview) {
+        return;
+    }
+
+    QScreen* targetScreen = QGuiApplication::primaryScreen();
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    if (m_currentSelection.kind == ShareSelection::Kind::Screen) {
+        if (m_currentSelection.screenIndex >= 0 && m_currentSelection.screenIndex < screens.size()) {
+            if (screens.size() > 1) {
+                for (int i = 0; i < screens.size(); ++i) {
+                    if (i != m_currentSelection.screenIndex && screens.at(i)) {
+                        targetScreen = screens.at(i);
+                        break;
+                    }
+                }
+            } else {
+                targetScreen = screens.at(m_currentSelection.screenIndex);
+            }
+        }
+    }
+#ifdef Q_OS_WIN
+    else {
+        const HWND hwnd = reinterpret_cast<HWND>(m_currentSelection.hwnd);
+        RECT rect{};
+        if (hwnd && IsWindow(hwnd) && GetWindowRect(hwnd, &rect)) {
+            targetScreen = QGuiApplication::screenAt(QPoint((rect.left + rect.right) / 2,
+                                                            (rect.top + rect.bottom) / 2));
+        }
+    }
+#endif
+    if (!targetScreen) {
+        return;
+    }
+
+    const QRect available = targetScreen->availableGeometry();
+    const QSize previewSize = m_preview->size();
+    m_preview->move(available.right() - previewSize.width() - 24,
+                    available.bottom() - previewSize.height() - 24);
+}
+
+void MeetingMainWindow::handleCaptureError(const QString& error)
+{
+    if (m_preview) {
+        m_preview->showError(error);
+    }
+
+    if (error.isEmpty() || error == m_lastCaptureError) {
+        return;
+    }
+
+    m_lastCaptureError = error;
+    QWidget* parent = nullptr;
+    if (m_toolbar && m_toolbar->isVisible()) {
+        parent = m_toolbar;
+    } else if (isVisible()) {
+        parent = this;
+    }
+    QMessageBox::warning(parent, QStringLiteral("屏幕共享提示"), error);
 }
 
 void MeetingMainWindow::applyAnnotationGeometry()
