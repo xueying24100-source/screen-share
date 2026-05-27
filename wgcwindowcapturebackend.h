@@ -3,7 +3,10 @@
 #include <QImage>
 #include <QSize>
 #include <memory>
-#include <Windows.h>
+
+// 前置声明 HWND，避免在头文件中引入 Windows.h（会破坏 C++/WinRT 的 include 顺序）
+struct HWND__;
+typedef HWND__* HWND;
 
 class WgcWindowCaptureBackend {
 public:
