@@ -1,4 +1,5 @@
 #pragma once
+#include <QtGlobal>
 #ifdef Q_OS_WIN
 #include <QImage>
 #include <QSize>
@@ -17,6 +18,9 @@ public:
     bool start(HWND hwnd);         // 初始化 capture item + frame pool + session
     void stop();                   // 释放所有 WinRT/D3D 资源
     bool isRunning() const;
+    void setCursorCaptureEnabled(bool enabled);
+    void setBorderRequired(bool required);
+    void setMinUpdateInterval(int ms);
 
     // 在 timer tick 时调用，返回最新帧（null 表示无新帧）
     QImage tryGetFrame();

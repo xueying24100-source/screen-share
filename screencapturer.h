@@ -35,7 +35,11 @@ public:
     void startScreen(int screenIndex, int fps = 30);
     void startWindow(quintptr windowId, int fps = 30);
     void stop();
+    void pause();
+    void resume();
+    bool isPaused() const { return m_paused; }
     bool isRunning() const { return m_running; }
+    void setWgcOptions(bool cursor, bool border, int minUpdateMs);
 
     void setOutputSize(const QSize& size) { m_outputSize = size; }
     QSize outputSize() const { return m_outputSize; }
@@ -72,7 +76,12 @@ private:
     bool         m_wgcFailed{false};
     qint64       m_frameIndex{0};
     QImage       m_lastWgcFrame;
+    QImage       m_lastEmittedFrame;
     qint64       m_lastWgcFrameTimeMs{0};
+    bool         m_paused{false};
+    bool         m_wgcCursorEnabled{true};
+    bool         m_wgcBorderRequired{true};
+    int          m_wgcMinUpdateIntervalMs{0};
 
 #ifdef Q_OS_WIN
     Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;

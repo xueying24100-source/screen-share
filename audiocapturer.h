@@ -18,6 +18,8 @@ public:
     void start();
     void stop();
     bool isRunning() const { return m_running; }
+    void setMuted(bool muted) { m_muted = muted; }
+    bool isMuted() const { return m_muted; }
 
 signals:
     void audioDataReady(const QByteArray& data);
@@ -30,6 +32,7 @@ private:
     QAudioSource*  m_audioSource  = nullptr;
     QIODevice*     m_audioDevice  = nullptr;
     bool           m_running      = false;
+    bool           m_muted        = false;
 
     QAudioFormat defaultFormat() const;
 };
