@@ -13,6 +13,7 @@ set(SOURCES
     main.cpp
     mainwindow.cpp
     meetingmainwindow.cpp
+    localpreviewwindow.cpp
     annotationoverlay.cpp
     annotationwindow.cpp
     wgctestwindow.cpp
@@ -30,6 +31,7 @@ set(SOURCES
 set(HEADERS
     mainwindow.h
     meetingmainwindow.h
+    localpreviewwindow.h
     annotationoverlay.h
     annotationwindow.h
     wgctestwindow.h

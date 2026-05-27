@@ -60,10 +60,16 @@ public:
         m_thumbLabel->setAlignment(Qt::AlignCenter);
         m_thumbLabel->setStyleSheet(QStringLiteral("background:#0f1116;border-radius:4px;"));
 
+        m_noteLabel = new QLabel(this);
+        m_noteLabel->setWordWrap(true);
+        m_noteLabel->setStyleSheet(QStringLiteral("color:#8a93a3;font-size:11px;"));
+        m_noteLabel->hide();
+
         m_titleLabel = new QLabel(this);
         m_titleLabel->setWordWrap(true);
         m_subtitleLabel = new QLabel(this);
 
+        layout->addWidget(m_noteLabel);
         layout->addWidget(m_thumbLabel, 0, Qt::AlignCenter);
         layout->addWidget(m_titleLabel);
         layout->addWidget(m_subtitleLabel);
@@ -89,6 +95,12 @@ public:
         m_subtitleLabel->setText(subtitle);
     }
 
+    void setNoteText(const QString& text)
+    {
+        m_noteLabel->setText(text);
+        m_noteLabel->setVisible(!text.isEmpty());
+    }
+
 signals:
     void clicked();
     void doubleClicked();
@@ -112,6 +124,7 @@ protected:
 
 private:
     QLabel* m_thumbLabel{nullptr};
+    QLabel* m_noteLabel{nullptr};
     QLabel* m_titleLabel{nullptr};
     QLabel* m_subtitleLabel{nullptr};
 };
@@ -323,11 +336,19 @@ ShareSourcePicker::ShareSourcePicker(QWidget* parent)
 
 void ShareSourcePicker::populateScreens()
 {
+    QWidget* parent = parentWidget();
+    const bool restoreParent = parent && parent->isVisible();
+    if (restoreParent) {
+        parent->hide();
+        QApplication::processEvents();
+    }
+
     const QList<ScreenInfo> screens = SourceEnumerator::enumerateScreens();
     for (int i = 0; i < screens.size(); ++i) {
         const ScreenInfo& info = screens.at(i);
 
         auto* card = new SourceCard(m_screenTab);
+        card->setNoteText(QStringLiteral("（缩略图为打开本对话框瞬间的屏幕截图）"));
         card->setTexts(info.name, QStringLiteral("%1 × %2").arg(info.resolution.width()).arg(info.resolution.height()));
 
         QPixmap thumb = placeholderThumbnail(QStringLiteral("屏幕"));
@@ -372,6 +393,11 @@ void ShareSourcePicker::populateScreens()
                 m_selectedScreenWidget = first;
             }
         }
+    }
+
+    if (restoreParent) {
+        parent->show();
+        parent->raise();
     }
 }
 
