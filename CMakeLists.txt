@@ -50,4 +50,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi user32 WindowsApp)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        /await:strict
+        /Zc:__cplusplus
+    )
 endif()
