@@ -34,6 +34,7 @@ private:
     QImage m_lastFrame;
     QString m_backendName{QStringLiteral("-")};
     QSize m_sourceSize;
+    QSize m_displaySize;
     qint64 m_frameIndex{0};
     int m_fps{0};
     QQueue<qint64> m_frameTimesMs;

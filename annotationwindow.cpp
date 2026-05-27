@@ -319,6 +319,8 @@ AnnotationWindow::AnnotationWindow(QWidget* parent)
             this, &AnnotationWindow::strokePacketReady);
     connect(m_overlay, &AnnotationOverlay::textAnnotationCreated,
             this, &AnnotationWindow::textAnnotationCreated);
+    connect(m_overlay, &AnnotationOverlay::contentChanged,
+            this, &AnnotationWindow::contentChanged);
     connect(m_overlay, &AnnotationOverlay::closeRequested, this, &AnnotationWindow::requestExit);
 
     // Debug / legacy
@@ -341,6 +343,11 @@ void AnnotationWindow::requestExit()
 {
     emitClosedOnce();
     close();
+}
+
+QImage AnnotationWindow::renderAnnotationsToImage(const QSize& targetSize) const
+{
+    return m_overlay ? m_overlay->renderAnnotationsToImage(targetSize) : QImage{};
 }
 
 void AnnotationWindow::keyPressEvent(QKeyEvent* event)

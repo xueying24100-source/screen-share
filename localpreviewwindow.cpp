@@ -11,12 +11,13 @@ LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
     : QWidget(parent)
 {
     setWindowTitle(QStringLiteral("本地预览"));
-    setWindowFlags(Qt::Tool | Qt::WindowStaysOnTopHint | Qt::WindowDoesNotAcceptFocus);
+    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint | Qt::WindowDoesNotAcceptFocus);
     setAttribute(Qt::WA_ShowWithoutActivating);
     setAttribute(Qt::WA_StyledBackground, true);
     setFocusPolicy(Qt::NoFocus);
     setObjectName(QStringLiteral("localPreviewWindow"));
-    resize(480, 270);
+    resize(960, 540);
+    setMinimumSize(320, 180);
     setStyleSheet(QStringLiteral(
         "QWidget#localPreviewWindow { background:#10131a; border:1px solid #2d3443; border-radius:10px; }"
         "QLabel { color:#d6d8de; }"));
@@ -28,7 +29,7 @@ LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
     m_previewLabel = new QLabel(QStringLiteral("等待共享画面..."), this);
     m_previewLabel->setAlignment(Qt::AlignCenter);
     m_previewLabel->setScaledContents(false);
-    m_previewLabel->setMinimumSize(440, 210);
+    m_previewLabel->setMinimumSize(0, 0);
     m_previewLabel->setStyleSheet(QStringLiteral("background:#0b0d12;border-radius:6px;"));
 
     m_statusLabel = new QLabel(this);
@@ -99,17 +100,35 @@ void LocalPreviewWindow::refreshPreviewPixmap()
         return;
     }
 
-    m_previewLabel->setPixmap(QPixmap::fromImage(m_lastFrame).scaled(
-        m_previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    const QSize targetSize = m_previewLabel->size();
+    const QSize sourceSize = m_lastFrame.size();
+    if (!targetSize.isValid() || !sourceSize.isValid()) {
+        return;
+    }
+
+    QPixmap pixmap = QPixmap::fromImage(m_lastFrame);
+    if (sourceSize.width() <= targetSize.width() && sourceSize.height() <= targetSize.height()) {
+        m_displaySize = sourceSize;
+        m_previewLabel->setPixmap(pixmap);
+    } else {
+        const QPixmap scaledPixmap = pixmap.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        m_displaySize = scaledPixmap.size();
+        m_previewLabel->setPixmap(scaledPixmap);
+    }
+    refreshStatusText();
 }
 
 void LocalPreviewWindow::refreshStatusText()
 {
+    const QString displaySizeText = m_displaySize.isValid()
+        ? QStringLiteral("%1×%2").arg(m_displaySize.width()).arg(m_displaySize.height())
+        : QStringLiteral("-");
     m_statusLabel->setText(
-        QStringLiteral("Backend: %1 | %2×%3 | frame #%4 | %5 fps")
+        QStringLiteral("Backend: %1 | %2×%3 | frame #%4 | %5 fps | 显示 %6 | 可拖动边角调整预览大小")
             .arg(m_backendName)
             .arg(m_sourceSize.width())
             .arg(m_sourceSize.height())
             .arg(m_frameIndex)
-            .arg(m_fps));
+            .arg(m_fps)
+            .arg(displaySizeText));
 }
