@@ -102,7 +102,7 @@ LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
 
     m_previewLabel = new QLabel(QStringLiteral("等待共享画面..."), this);
     m_previewLabel->setAlignment(Qt::AlignCenter);
-    m_previewLabel->setScaledContents(false);
+    m_previewLabel->setScaledContents(true);
     m_previewLabel->setMinimumSize(0, 0);
     m_previewLabel->setStyleSheet(QStringLiteral("background:#0b0d12;border-radius:6px;"));
 
@@ -203,7 +203,7 @@ void LocalPreviewWindow::showError(const QString& error)
 void LocalPreviewWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    refreshPreviewPixmap();
+    // With setScaledContents(true), QLabel re-scales automatically on resize.
 }
 
 void LocalPreviewWindow::updateMicLevel(double dbfs)
@@ -246,21 +246,11 @@ void LocalPreviewWindow::refreshPreviewPixmap()
         return;
     }
 
-    const QSize targetSize = m_previewLabel->size();
-    const QSize sourceSize = m_lastFrame.size();
-    if (!targetSize.isValid() || !sourceSize.isValid()) {
-        return;
-    }
-
-    QPixmap pixmap = QPixmap::fromImage(m_lastFrame);
-    if (sourceSize.width() <= targetSize.width() && sourceSize.height() <= targetSize.height()) {
-        m_displaySize = sourceSize;
-        m_previewLabel->setPixmap(pixmap);
-    } else {
-        const QPixmap scaledPixmap = pixmap.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        m_displaySize = scaledPixmap.size();
-        m_previewLabel->setPixmap(scaledPixmap);
-    }
+    // Let Qt/GPU handle scaling via QLabel::setScaledContents(true).
+    // Avoid CPU-side scaled() to keep the main thread free.
+    const QPixmap pixmap = QPixmap::fromImage(m_lastFrame);
+    m_displaySize = pixmap.size();
+    m_previewLabel->setPixmap(pixmap);
     refreshStatusText();
 }
 

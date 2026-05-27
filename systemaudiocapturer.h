@@ -13,8 +13,10 @@ public:
     explicit SystemAudioCapturer(QObject* parent = nullptr);
     ~SystemAudioCapturer();
 
-    void setEnabled(bool enabled);
     bool isEnabled() const { return m_enabled; }
+
+public slots:
+    void setEnabled(bool enabled);
 
 signals:
     void systemAudioDataReady(const QByteArray& pcm, int sampleRate, int channels);

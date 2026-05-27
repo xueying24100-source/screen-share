@@ -1,5 +1,8 @@
 #include "audiocapturer.h"
 
+#include <QDebug>
+#include <QThread>
+
 AudioCapturer::AudioCapturer(QObject* parent)
     : QObject(parent)
 {
@@ -25,6 +28,8 @@ void AudioCapturer::start()
         return;
     }
 
+    qDebug() << "[AudioCapturer] thread=" << QThread::currentThread();
+
     const QAudioDevice inputDevice = QMediaDevices::defaultAudioInput();
     if (inputDevice.isNull()) {
         emit captureError("No default audio input device found");
@@ -38,7 +43,10 @@ void AudioCapturer::start()
     }
 
     m_audioSource = new QAudioSource(inputDevice, format, this);
-    m_audioSource->setBufferSize(640);
+
+    // Request a large buffer to tolerate main-thread load (~200 ms).
+    // The driver may silently clamp; we log the actual value after start().
+    m_audioSource->setBufferSize(6400);
 
     m_audioDevice = m_audioSource->start();
     if (!m_audioDevice) {
@@ -48,6 +56,7 @@ void AudioCapturer::start()
         return;
     }
 
+    qDebug() << "[AudioCapturer] started, actual bufferSize=" << m_audioSource->bufferSize();
     connect(m_audioDevice, &QIODevice::readyRead, this, &AudioCapturer::onDataReady);
     m_running = true;
 }
@@ -66,6 +75,11 @@ void AudioCapturer::stop()
     }
 
     m_running = false;
+}
+
+void AudioCapturer::setMuted(bool muted)
+{
+    m_muted = muted;
 }
 
 void AudioCapturer::onDataReady()

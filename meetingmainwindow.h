@@ -5,6 +5,7 @@
 #include <QElapsedTimer>
 #include <QImage>
 #include <QString>
+#include <QThread>
 
 #include "sharesourcepicker.h"
 
@@ -51,6 +52,9 @@ private:
     ShareToolbar* m_toolbar{nullptr};
     QTimer* m_windowFollowTimer{nullptr};
     QTimer* m_previewRefreshTimer{nullptr};
+
+    QThread* m_audioThread{nullptr};
+    QThread* m_captureThread{nullptr};
 
     QPushButton* m_shareButton{nullptr};
     QPushButton* m_endButton{nullptr};
