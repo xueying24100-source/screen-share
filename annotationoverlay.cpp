@@ -48,7 +48,7 @@ QPainterPath AnnotationOverlay::buildSmoothPath(const QList<QPointF>& pts)
 // Render a stroke onto an existing QPainter
 // ──────────────────────────────────────────────
 
-void AnnotationOverlay::renderStroke(QPainter& painter, const Stroke& stroke)
+void AnnotationOverlay::renderStroke(QPainter& painter, const Stroke& stroke) const
 {
     if (stroke.points.isEmpty())
         return;
@@ -108,7 +108,7 @@ void AnnotationOverlay::rebuildCache()
 // Draw a single text annotation
 // ──────────────────────────────────────────────
 
-void AnnotationOverlay::drawTextAnnotation(QPainter& painter, const TextAnnotation& item)
+void AnnotationOverlay::drawTextAnnotation(QPainter& painter, const TextAnnotation& item) const
 {
     QFont font = painter.font();
     font.setPointSize(item.fontSize);
@@ -123,6 +123,42 @@ void AnnotationOverlay::drawTextAnnotation(QPainter& painter, const TextAnnotati
     // Actual text
     painter.setPen(item.color);
     painter.drawText(QPointF(item.position.x(), item.position.y() + fm.ascent()), item.text);
+}
+
+void AnnotationOverlay::paintAnnotations(QPainter& painter) const
+{
+    if (!m_cachedPixmap.isNull()) {
+        painter.drawPixmap(0, 0, m_cachedPixmap);
+    }
+
+    for (const Stroke& s : m_remoteStrokes) {
+        renderStroke(painter, s);
+    }
+
+    if (m_drawing) {
+        renderStroke(painter, m_currentStroke);
+    }
+
+    for (const TextAnnotation& ta : m_textAnnotations) {
+        drawTextAnnotation(painter, ta);
+    }
+}
+
+QImage AnnotationOverlay::renderAnnotationsToImage(const QSize& targetSize) const
+{
+    if (!targetSize.isValid() || width() <= 0 || height() <= 0) {
+        return {};
+    }
+
+    QImage image(targetSize, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    painter.scale(targetSize.width() / double(width()), targetSize.height() / double(height()));
+    paintAnnotations(painter);
+    return image;
 }
 
 // ──────────────────────────────────────────────
@@ -210,6 +246,7 @@ void AnnotationOverlay::clearAll()
         m_cachedPixmap.fill(Qt::transparent);
     update();
     emit undoRedoChanged();
+    emit contentChanged();
 
     StrokePacket pkt;
     pkt.type = StrokeEventType::Clear;
@@ -239,6 +276,7 @@ void AnnotationOverlay::undo()
 
     update();
     emit undoRedoChanged();
+    emit contentChanged();
 }
 
 void AnnotationOverlay::redo()
@@ -258,6 +296,7 @@ void AnnotationOverlay::redo()
 
     update();
     emit undoRedoChanged();
+    emit contentChanged();
 }
 
 void AnnotationOverlay::addStroke(const Stroke& stroke)
@@ -269,6 +308,7 @@ void AnnotationOverlay::addStroke(const Stroke& stroke)
     m_redoHistory.clear();
     update();
     emit undoRedoChanged();
+    emit contentChanged();
 }
 
 void AnnotationOverlay::applyRemotePacket(const StrokePacket& pkt)
@@ -287,6 +327,7 @@ void AnnotationOverlay::applyRemotePacket(const StrokePacket& pkt)
         if (m_remoteStrokes.contains(pkt.strokeId)) {
             m_remoteStrokes[pkt.strokeId].points.append(pkt.point);
             update();
+            emit contentChanged();
         }
         break;
     }
@@ -301,6 +342,7 @@ void AnnotationOverlay::applyRemotePacket(const StrokePacket& pkt)
             update();
             emit undoRedoChanged();
             emit strokeFinished(s);
+            emit contentChanged();
         }
         break;
     }
@@ -310,6 +352,7 @@ void AnnotationOverlay::applyRemotePacket(const StrokePacket& pkt)
             rebuildCache();
             update();
             emit undoRedoChanged();
+            emit contentChanged();
         }
         break;
     }
@@ -323,6 +366,7 @@ void AnnotationOverlay::applyRemotePacket(const StrokePacket& pkt)
             m_cachedPixmap.fill(Qt::transparent);
         update();
         emit undoRedoChanged();
+        emit contentChanged();
         break;
     }
     }
@@ -389,6 +433,7 @@ void AnnotationOverlay::commitTextInput()
         emit textAnnotationCreated(ta);
         emit undoRedoChanged();
         update();
+        emit contentChanged();
     }
 }
 
@@ -402,6 +447,7 @@ void AnnotationOverlay::cancelTextInput()
     ed->hide();
     ed->deleteLater();
     update();
+    emit contentChanged();
 }
 
 // ──────────────────────────────────────────────
@@ -444,20 +490,7 @@ void AnnotationOverlay::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
     painter.fillRect(rect(), QColor(0, 0, 0, 1));
-
-    if (!m_cachedPixmap.isNull())
-        painter.drawPixmap(0, 0, m_cachedPixmap);
-
-    // Draw in-progress remote strokes
-    for (const Stroke& s : m_remoteStrokes)
-        renderStroke(painter, s);
-
-    if (m_drawing)
-        renderStroke(painter, m_currentStroke);
-
-    // Draw committed text annotations
-    for (const TextAnnotation& ta : m_textAnnotations)
-        drawTextAnnotation(painter, ta);
+    paintAnnotations(painter);
 }
 
 // ──────────────────────────────────────────────
@@ -505,6 +538,7 @@ void AnnotationOverlay::mousePressEvent(QMouseEvent* event)
     emit strokePacketReady(pkt);
 
     update();
+    emit contentChanged();
 }
 
 void AnnotationOverlay::mouseMoveEvent(QMouseEvent* event)
@@ -535,6 +569,7 @@ void AnnotationOverlay::mouseMoveEvent(QMouseEvent* event)
         } else {
             update();
         }
+        emit contentChanged();
     }
 }
 
@@ -555,6 +590,7 @@ void AnnotationOverlay::mouseReleaseEvent(QMouseEvent* event)
         m_undoHistory.append({ActionType::Stroke, m_currentStroke, {}});
         emit strokeFinished(m_currentStroke);
         emit undoRedoChanged();
+        emit contentChanged();
 
         StrokePacket pkt;
         pkt.type     = StrokeEventType::End;
@@ -569,6 +605,7 @@ void AnnotationOverlay::mouseReleaseEvent(QMouseEvent* event)
     m_currentStroke.points.clear();
     m_drawing = false;
     update();
+    emit contentChanged();
 }
 
 // ──────────────────────────────────────────────

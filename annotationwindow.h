@@ -13,11 +13,13 @@ public:
     explicit AnnotationWindow(QWidget* parent = nullptr);
     void setTargetGeometry(const QRect& screenRect);
     void requestExit();
+    QImage renderAnnotationsToImage(const QSize& targetSize) const;
 
 signals:
     void closed();
     void strokePacketReady(const StrokePacket& pkt);
     void textAnnotationCreated(const TextAnnotation& text);
+    void contentChanged();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

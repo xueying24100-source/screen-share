@@ -26,6 +26,21 @@ QString windowCaptureUnavailableMessage()
 {
     return QStringLiteral("无法捕获该窗口的内容；该窗口可能被其它窗口遮挡、最小化或受 DRM 保护");
 }
+
+QImage prepareOutputFrame(const QImage& frame, const QSize& outputSize)
+{
+    if (frame.isNull()) {
+        return {};
+    }
+
+    QImage output = frame;
+    if (outputSize.isValid()
+        && (frame.width() > outputSize.width() || frame.height() > outputSize.height())) {
+        output = frame.scaled(outputSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+
+    return output.convertToFormat(QImage::Format_RGB32);
+}
 }
 
 ScreenCapturer::ScreenCapturer(QObject* parent)
@@ -395,8 +410,7 @@ bool ScreenCapturer::captureWithDXGI()
     m_d3dContext->Unmap(m_stagingTexture.Get(), 0);
     releaseFrame();
 
-    QImage output = frame.scaled(m_outputSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                         .convertToFormat(QImage::Format_RGB32);
+    QImage output = prepareOutputFrame(frame, m_outputSize);
     ++m_frameIndex;
     m_lastEmittedFrame = output;
     emit frameCaptured(output);
@@ -662,11 +676,7 @@ void ScreenCapturer::captureWithGrabWindow()
         return;
     }
 
-    QImage frame = pixmap.toImage()
-                         .scaled(m_outputSize,
-                                 Qt::IgnoreAspectRatio,
-                                 Qt::SmoothTransformation)
-                         .convertToFormat(QImage::Format_RGB32);
+    QImage frame = prepareOutputFrame(pixmap.toImage(), m_outputSize);
 
     ++m_frameIndex;
     m_lastEmittedFrame = frame;

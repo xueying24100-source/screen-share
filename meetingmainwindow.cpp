@@ -14,10 +14,12 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPushButton>
 #include <QScreen>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QtGlobal>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -34,6 +36,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     , m_systemAudioCapturer(new SystemAudioCapturer(this))
     , m_toolbar(new ShareToolbar())
     , m_windowFollowTimer(new QTimer(this))
+    , m_previewRefreshTimer(new QTimer(this))
 {
     auto* central = new QWidget(this);
     auto* rootLayout = new QVBoxLayout(central);
@@ -84,6 +87,8 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
                         m_sender, &Sender::onStrokePacketReady);
                 connect(m_annotationWindow, &AnnotationWindow::textAnnotationCreated,
                         m_sender, &Sender::onTextAnnotationCreated);
+                connect(m_annotationWindow, &AnnotationWindow::contentChanged,
+                        this, &MeetingMainWindow::refreshPreviewComposite);
                 connect(m_annotationWindow, &AnnotationWindow::closed, this, [this]() {
                     if (!m_annotationWindow) {
                         return;
@@ -91,6 +96,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
                     m_annotationWindow->deleteLater();
                     m_annotationWindow = nullptr;
                     m_toolbar->setAnnotationEnabled(false);
+                    refreshPreviewComposite();
                 });
             }
             applyAnnotationGeometry();
@@ -118,14 +124,16 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     connect(m_toolbar, &ShareToolbar::stopRequested, this, &MeetingMainWindow::stopSharing);
 
     connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
-
-    connect(m_capturer, &ScreenCapturer::frameCaptured, m_sender, &Sender::onMainScreenFrameCaptured);
-    connect(m_capturer, &ScreenCapturer::frameCaptured, this, [this](const QImage& frame) {
-        m_lastCaptureError.clear();
-        if (m_preview) {
-            m_preview->updateFrame(frame);
+    m_previewRefreshTimer->setSingleShot(true);
+    m_previewRefreshTimer->setInterval(30);
+    connect(m_previewRefreshTimer, &QTimer::timeout, this, [this]() {
+        if (!m_preview || m_lastRawFrame.isNull()) {
+            return;
         }
+        m_preview->updateFrame(composeFrameWithAnnotations(m_lastRawFrame));
     });
+
+    connect(m_capturer, &ScreenCapturer::frameCaptured, this, &MeetingMainWindow::onFrameCaptured);
     connect(m_capturer, &ScreenCapturer::frameMetadataChanged, this, [this](const CaptureFrameMetadata& meta) {
         if (m_preview) {
             m_preview->updateMetadata(meta);
@@ -191,6 +199,13 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
                 m_windowFollowTimer->stop();
             }
         } else {
+            const QList<QScreen*> screens = QGuiApplication::screens();
+            if (selection.screenIndex >= 0 && selection.screenIndex < screens.size() && screens.at(selection.screenIndex)) {
+                const QScreen* screen = screens.at(selection.screenIndex);
+                const qreal dpr = screen->devicePixelRatio();
+                m_capturer->setOutputSize(QSize(qRound(screen->size().width() * dpr),
+                                                qRound(screen->size().height() * dpr)));
+            }
             m_capturer->startScreen(selection.screenIndex, selection.fps);
             m_windowFollowTimer->stop();
         }
@@ -235,6 +250,7 @@ void MeetingMainWindow::stopSharing()
     ++m_shareStartRequestId;
     m_shareStartPending = false;
     m_windowFollowTimer->stop();
+    m_previewRefreshTimer->stop();
     m_capturer->stop();
     m_audioCapturer->stop();
     m_systemAudioCapturer->setEnabled(false);
@@ -257,6 +273,7 @@ void MeetingMainWindow::stopSharing()
 
     m_sharing = false;
     m_lastCaptureError.clear();
+    m_lastRawFrame = QImage{};
     m_endButton->setEnabled(false);
     showNormal();
     raise();
@@ -354,6 +371,44 @@ void MeetingMainWindow::handleCaptureError(const QString& error)
         parent = this;
     }
     QMessageBox::warning(parent, QStringLiteral("屏幕共享提示"), error);
+}
+
+void MeetingMainWindow::onFrameCaptured(const QImage& frame)
+{
+    m_lastCaptureError.clear();
+    m_lastRawFrame = frame;
+
+    const QImage composedFrame = composeFrameWithAnnotations(frame);
+    m_sender->onMainScreenFrameCaptured(composedFrame);
+    if (m_preview) {
+        m_preview->updateFrame(composedFrame);
+    }
+}
+
+void MeetingMainWindow::refreshPreviewComposite()
+{
+    if (!m_preview || m_lastRawFrame.isNull()) {
+        return;
+    }
+    m_previewRefreshTimer->start();
+}
+
+QImage MeetingMainWindow::composeFrameWithAnnotations(const QImage& frame) const
+{
+    if (frame.isNull() || !m_annotationWindow || !m_annotationWindow->isVisible()) {
+        return frame;
+    }
+
+    const QImage layer = m_annotationWindow->renderAnnotationsToImage(frame.size());
+    if (layer.isNull()) {
+        return frame;
+    }
+
+    QImage composed = frame.copy();
+    QPainter painter(&composed);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.drawImage(0, 0, layer);
+    return composed;
 }
 
 void MeetingMainWindow::applyAnnotationGeometry()

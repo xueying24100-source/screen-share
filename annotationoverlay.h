@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QColor>
+#include <QImage>
 #include <QPointF>
 #include <QList>
 #include <QPixmap>
@@ -56,6 +57,7 @@ public:
     AnnotationTool currentTool() const { return m_currentTool; }
 
     QList<Stroke> strokes() const { return m_strokes; }
+    QImage renderAnnotationsToImage(const QSize& targetSize) const;
 
 public slots:
     void setPenColor(const QColor& color);
@@ -78,6 +80,7 @@ signals:
     void undoRedoChanged();
     void textAnnotationCreated(const TextAnnotation& text);
     void toolChanged(AnnotationTool tool);
+    void contentChanged();
     // Emitted when the user requests to close/exit annotation mode (e.g. Esc key).
     // Owners (MeetingMainWindow) should hide the overlay and update toolbar state.
     void closeRequested();
@@ -93,11 +96,12 @@ protected:
 
 private:
     static QPainterPath buildSmoothPath(const QList<QPointF>& pts);
-    void renderStroke(QPainter& painter, const Stroke& stroke);
+    void renderStroke(QPainter& painter, const Stroke& stroke) const;
     void renderStrokeToCache(const Stroke& stroke);
     void rebuildCache();
     void beginTextInput(const QPointF& pos);
-    void drawTextAnnotation(QPainter& painter, const TextAnnotation& item);
+    void drawTextAnnotation(QPainter& painter, const TextAnnotation& item) const;
+    void paintAnnotations(QPainter& painter) const;
 
     // Strokes
     QPixmap        m_cachedPixmap;
