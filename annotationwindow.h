@@ -14,6 +14,7 @@ public:
     void setTargetGeometry(const QRect& screenRect);
     void requestExit();
     QImage renderAnnotationsToImage(const QSize& targetSize) const;
+    bool hasRenderableContent() const;
 
 signals:
     void closed();

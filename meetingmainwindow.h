@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QString>
 
@@ -36,7 +37,7 @@ private:
     void handleCaptureError(const QString& error);
     void onFrameCaptured(const QImage& frame);
     void refreshPreviewComposite();
-    QImage composeFrameWithAnnotations(const QImage& frame) const;
+    QImage composeFrameWithAnnotations(const QImage& frame);
     void onMixedAudio(const QByteArray& pcm);
 
     ScreenCapturer* m_capturer{nullptr};
@@ -60,5 +61,11 @@ private:
     QString m_lastCaptureError;
     ShareSelection m_currentSelection;
     QImage m_lastRawFrame;
+    QImage m_annotationLayerCache;
+    QSize m_annotationLayerCacheSourceSize;
+    QString m_lastFrameBackend;
+    QElapsedTimer m_frameLogTimer;
+    QElapsedTimer m_mixedAudioLogTimer;
     bool m_localPlaybackWarningShown{false};
+    bool m_annotationLayerDirty{true};
 };

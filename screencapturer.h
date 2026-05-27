@@ -62,6 +62,7 @@ private:
     bool captureWithDXGI();
     void captureWithGrabWindow();
     void captureWithGdiWindow();
+    void emitFrameWithStats(const QImage& frame, const QString& backendName, const QSize& sourceSize);
     bool pixmapLooksMostlyBlack(const QPixmap& pixmap) const;
 
     QTimer* m_timer;
@@ -84,6 +85,8 @@ private:
     bool         m_wgcCursorEnabled{true};
     bool         m_wgcBorderRequired{true};
     int          m_wgcMinUpdateIntervalMs{0};
+    qint64       m_statsWindowStartMs{0};
+    int          m_statsWindowFrames{0};
 
 #ifdef Q_OS_WIN
     Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;

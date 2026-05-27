@@ -350,6 +350,11 @@ QImage AnnotationWindow::renderAnnotationsToImage(const QSize& targetSize) const
     return m_overlay ? m_overlay->renderAnnotationsToImage(targetSize) : QImage{};
 }
 
+bool AnnotationWindow::hasRenderableContent() const
+{
+    return m_overlay && m_overlay->hasRenderableContent();
+}
+
 void AnnotationWindow::keyPressEvent(QKeyEvent* event)
 {
     const Qt::KeyboardModifiers mods = event->modifiers();

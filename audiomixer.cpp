@@ -1,6 +1,7 @@
 #include "audiomixer.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QtGlobal>
 
 #include <cmath>
@@ -18,6 +19,11 @@ void AudioMixer::pushMicPcm(const QByteArray& pcm16k1chInt16)
         return;
     }
 
+    if (!m_firstMicLogged) {
+        qDebug() << "[Mixer] first mic packet bytes=" << pcm16k1chInt16.size();
+        m_firstMicLogged = true;
+    }
+    trimBufferIfOverflow(m_micBuffer, "mic");
     m_lastMicDataMs = QDateTime::currentMSecsSinceEpoch();
     m_micBuffer.append(pcm16k1chInt16);
     tryEmitFrames();
@@ -29,11 +35,16 @@ void AudioMixer::pushSystemPcm(const QByteArray& pcmFloat32Interleaved, int samp
         return;
     }
 
+    if (!m_firstSystemLogged) {
+        qDebug() << "[Mixer] first system packet bytes=" << pcmFloat32Interleaved.size();
+        m_firstSystemLogged = true;
+    }
     const QByteArray converted = convertSystemTo16kMonoInt16(pcmFloat32Interleaved, sampleRate, channels);
     if (converted.isEmpty()) {
         return;
     }
 
+    trimBufferIfOverflow(m_systemBuffer, "system");
     m_lastSystemDataMs = QDateTime::currentMSecsSinceEpoch();
     m_systemBuffer.append(converted);
     tryEmitFrames();
@@ -45,6 +56,9 @@ void AudioMixer::reset()
     m_systemBuffer.clear();
     m_lastMicDataMs = -1;
     m_lastSystemDataMs = -1;
+    m_firstMicLogged = false;
+    m_firstSystemLogged = false;
+    qDebug() << "[Mixer] reset";
 }
 
 void AudioMixer::tryEmitFrames()
@@ -52,13 +66,15 @@ void AudioMixer::tryEmitFrames()
     const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
     const bool micActive = (m_lastMicDataMs >= 0) && ((nowMs - m_lastMicDataMs) <= kInactiveThresholdMs);
     const bool systemActive = (m_lastSystemDataMs >= 0) && ((nowMs - m_lastSystemDataMs) <= kInactiveThresholdMs);
+    int emittedFrames = 0;
 
-    while (true) {
+    while (emittedFrames < kMaxFramesPerCall) {
         if (micActive && systemActive) {
             if (m_micBuffer.size() < kFrameBytes || m_systemBuffer.size() < kFrameBytes) {
                 return;
             }
             emit mixedAudioReady(mixFrames(takeFrame(m_micBuffer), takeFrame(m_systemBuffer)));
+            ++emittedFrames;
             continue;
         }
 
@@ -67,6 +83,7 @@ void AudioMixer::tryEmitFrames()
                 return;
             }
             emit mixedAudioReady(takeFrame(m_micBuffer));
+            ++emittedFrames;
             continue;
         }
 
@@ -75,11 +92,29 @@ void AudioMixer::tryEmitFrames()
                 return;
             }
             emit mixedAudioReady(takeFrame(m_systemBuffer));
+            ++emittedFrames;
             continue;
         }
 
         return;
     }
+}
+
+void AudioMixer::trimBufferIfOverflow(QByteArray& buffer, const char* bufferName)
+{
+    if (buffer.size() <= kBufferOverflowBytes) {
+        return;
+    }
+
+    int dropBytes = buffer.size() / 2;
+    dropBytes -= (dropBytes % kFrameBytes);
+    if (dropBytes <= 0) {
+        return;
+    }
+
+    buffer.remove(0, dropBytes);
+    const int droppedMs = dropBytes / 32;
+    qDebug() << "AudioMixer" << bufferName << "buffer overflow, dropped" << droppedMs << "ms";
 }
 
 QByteArray AudioMixer::takeFrame(QByteArray& buffer)

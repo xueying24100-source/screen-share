@@ -176,6 +176,14 @@ AnnotationOverlay::AnnotationOverlay(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
 }
 
+bool AnnotationOverlay::hasRenderableContent() const
+{
+    return !m_strokes.isEmpty()
+        || !m_remoteStrokes.isEmpty()
+        || !m_textAnnotations.isEmpty()
+        || m_drawing;
+}
+
 // ──────────────────────────────────────────────
 // Public slots
 // ──────────────────────────────────────────────
