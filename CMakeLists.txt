@@ -17,6 +17,7 @@ set(SOURCES
     screencapturer.cpp
     audiocapturer.cpp
     audioplayer.cpp
+    sender.cpp
 )
 
 set(HEADERS
@@ -26,6 +27,7 @@ set(HEADERS
     screencapturer.h
     audiocapturer.h
     audioplayer.h
+    sender.h
 )
 
 add_executable(${PROJECT_NAME}
