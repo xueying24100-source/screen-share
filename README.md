@@ -1,154 +1,107 @@
 # Screen Share
 
-基于 Qt6 + C++20 的桌面屏幕共享系统，支持屏幕/窗口采集、实时音频传输与多人协同标注。
+基于 **Qt6 + C++20** 的 Windows 桌面屏幕共享 / 会议端应用，支持屏幕与窗口采集、实时音频传输、协同批注叠加以及本地预览监控。
 
 ---
 
-## 功能概览
+## 主要功能
 
-| 功能模块 | 描述 |
-|---------|------|
-| 🖥️ 屏幕采集 | 支持全屏/指定屏幕/窗口三种模式，Windows 下优先使用 DXGI/WGC 高性能后端，自动降级到 GrabWindow |
-| 🎙️ 语音通话 | 麦克风采集 PCM（16kHz/单声道/16-bit），扬声器实时播放远端音频 |
-| ✏️ 协同标注 | 透明绘图层覆盖在共享画面上，支持多人实时笔划同步与文字标注 |
-| 📡 多流发送 | Sender 模块汇聚视频/音频/标注流，按优先级队列调度发送，编码器与传输层均可替换 |
-
----
-
-## 项目结构
-
-```
-screen-share/
-├── main.cpp                    # 程序入口
-├── mainwindow.cpp/h            # 主窗口
-│
-├── screencapturer.cpp/h        # 屏幕采集模块（主模块）
-├── wgcwindowcapturebackend.cpp/h  # Windows WGC 窗口捕获后端
-├── sourceenumerator.cpp/h      # 屏幕/窗口枚举
-│
-├── audiocapturer.cpp/h         # 麦克风采集
-├── audioplayer.cpp/h           # 音频播放
-│
-├── annotationoverlay.cpp/h     # 画笔标注叠加层
-├── annotationwindow.cpp/h      # 标注工具窗口
-│
-├── sender.cpp/h                # 多路媒体发送调度中心
-│
-├── CMakeLists.txt              # 构建配置
-│
-├── DESIGN.md                   # 屏幕采集模块设计文档
-├── AUDIO_DESIGN.md             # 语音模块设计文档
-├── ANNOTATION_DESIGN.md        # 标注模块设计文档
-└── SENDER_DESIGN.md            # Sender 模块设计文档
-```
-
----
-
-## 环境要求
-
-| 依赖 | 版本 |
+| 功能 | 说明 |
 |------|------|
-| Qt | 6.x（Core / Gui / Widgets / Multimedia）|
-| CMake | ≥ 3.16 |
-| 编译器 | C++20 支持（MSVC 2022 / GCC 12+ / Clang 14+）|
-| 操作系统 | Windows 10/11（完整功能）；macOS / Linux（仅 GrabWindow 路径）|
-
-> Windows 下需链接 `d3d11`、`dxgi`、`user32`、`WindowsApp`，CMakeLists.txt 已自动配置。
+| 🖥️ 屏幕共享 | 全屏或指定屏幕采集，优先使用 DXGI GPU 直出，跨平台降级至 `GrabWindow` |
+| 🪟 窗口共享 | 指定窗口采集，优先使用 WGC（Win10 1803+），自动降级至 GDI（PrintWindow / BitBlt）|
+| 🎙️ 麦克风音频 | 16 kHz / 单声道 / 16-bit PCM 采集，静音开关 |
+| 🔊 系统声音 | WASAPI loopback 采集系统播放声音，可与麦克风混音后发送 |
+| 🎚️ 音频混音 | `AudioMixer` 双路混音，支持增益调节和人声 ducking 策略 |
+| ✏️ 协同批注 | 透明绘图层叠加在共享画面上，支持笔迹、橡皮、文字、撤销/重做及远端同步 |
+| 📺 本地预览 | `LocalPreviewWindow` 实时显示采集画面、后端信息、帧率和音量电平 |
+| 📡 多流发送 | `Sender` 汇聚视频/音频/批注流，优先级队列调度，编解码器与传输层均可替换 |
 
 ---
 
-## 构建步骤
+## 系统要求
+
+| 依赖 | 要求 |
+|------|------|
+| **操作系统** | Windows 10/11（完整功能）；macOS / Linux 仅支持 `GrabWindow` 采集 |
+| **Qt** | 6.x（Core / Gui / Widgets / Multimedia）|
+| **CMake** | ≥ 3.16 |
+| **编译器** | C++20（MSVC 2022 推荐；GCC 12+ / Clang 14+ 亦可）|
+| **Windows SDK** | 10.0.19041.0+，含 C++/WinRT 头文件（WGC 后端必需）|
+
+---
+
+## 快速构建
 
 ```bash
-# 克隆仓库
 git clone https://github.com/xueying24100-source/screen-share.git
-cd screen-share
+cd screen-share && git checkout wyd
 
-# 切换到目标分支（如 wyd）
-git checkout wyd
-
-# 配置并构建
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH="<Qt安装路径>/msvc2022_64"
 cmake --build build --parallel
 ```
 
-构建产物位于 `build/` 目录下，可执行文件名为 `ScreenShare_Capturer`。
+详细构建步骤、依赖库说明及常见问题，请参见 [docs/BUILD.md](docs/BUILD.md)。
 
 ---
 
-## 模块说明
+## 文档索引
 
-### ScreenCapturer — 屏幕采集
-
-- 输出信号：`frameCaptured(const QImage&)`，30fps，分辨率缩放至 1280×720
-- Windows：优先走 **DXGI Desktop Duplication**（可截取游戏/视频），失败自动降级
-- 支持 **WGC（Windows Graphics Capture）** 窗口级捕获
-- 跨平台降级路径：`QScreen::grabWindow()`
-
-详见 [DESIGN.md](DESIGN.md)
-
----
-
-### AudioCapturer / AudioPlayer — 语音
-
-- 采样率 16000 Hz，单声道，16-bit PCM
-- `AudioCapturer` emit `audioDataReady(QByteArray)`
-- `AudioPlayer::playData(QByteArray)` 接收远端音频直接播放
-
-详见 [AUDIO_DESIGN.md](AUDIO_DESIGN.md)
-
----
-
-### AnnotationOverlay — 协同标注
-
-- 透明绘图层覆盖在共享画面 QLabel 之上
-- 本地绘制完成后 emit `strokeFinished(Stroke)`，供 Sender 转发
-- 远端调用 `addStroke(Stroke)` 还原笔划；`clearAll()` 清空
-
-详见 [ANNOTATION_DESIGN.md](ANNOTATION_DESIGN.md)
-
----
-
-### Sender — 多路媒体发送
-
-- 支持多路流注册（主视频、PiP、音频、笔划、文字）
-- 四级优先级队列：Critical（音频）> High（标注）> Normal（主视频）> Low
-- 编码器可替换（当前：JPEG 视频 + PCM 音频）
-- 传输层可替换（当前：`DebugTransport` 调试模式，待接入真实 TCP/UDP）
-
-详见 [SENDER_DESIGN.md](SENDER_DESIGN.md)
-
----
-
-## 各模块协作信号连接示例
-
-```cpp
-// 屏幕帧 → Sender
-connect(capturer, &ScreenCapturer::frameCaptured,
-        sender,   &Sender::onMainScreenFrameCaptured);
-
-// 音频 → Sender
-connect(audioCapturer, &AudioCapturer::audioDataReady,
-        sender,        &Sender::onAudioDataReady);
-
-// 标注笔划 → Sender
-connect(overlay, &AnnotationOverlay::strokeFinished,
-        sender,  &Sender::onStrokePacketReady);
-
-// 启动
-capturer->start(30);
-audioCapturer->start();
-sender->start();
-```
-
----
-
-## 分支说明
-
-| 分支 | 内容 |
+| 文档 | 说明 |
 |------|------|
-| `main` | 主线集成分支 |
-| `wyd` | Sender 多流调度模块 + 音频模块 + 标注模块开发分支 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 总体架构、模块关系图、数据流、线程模型 |
+| [docs/CAPTURE.md](docs/CAPTURE.md) | 屏幕/窗口采集、GDI / DXGI / WGC 多后端策略、状态机 |
+| [docs/AUDIO.md](docs/AUDIO.md) | 麦克风采集、系统声音 loopback、混音器、本地回放 |
+| [docs/NETWORK.md](docs/NETWORK.md) | `Sender` 协议封包、优先级队列调度、编解码器接口 |
+| [docs/UI.md](docs/UI.md) | 会议主窗口、共享源选择、悬浮工具条、本地预览窗口 |
+| [docs/ANNOTATION.md](docs/ANNOTATION.md) | 批注层数据结构、渲染、撤销/重做、远端同步 |
+| [docs/BUILD.md](docs/BUILD.md) | 环境依赖、编译步骤、Qt Creator 集成、常见问题 |
+
+---
+
+## 目录结构
+
+```
+screen-share/
+├── main.cpp                        # 程序入口，初始化 WinRT 公寓并启动 MeetingMainWindow
+├── mainwindow.{h,cpp}              # 应用入口窗口（调试用）
+│
+├── 采集层
+│   ├── screencapturer.{h,cpp}      # 屏幕/窗口采集，DXGI / WGC / GDI / GrabWindow 多后端
+│   ├── wgcwindowcapturebackend.{h,cpp}  # Windows Graphics Capture 后端（C++/WinRT）
+│   ├── wgctestwindow.{h,cpp}       # WGC 独立调试窗口
+│   └── sourceenumerator.{h,cpp}    # 枚举屏幕和可见窗口
+│
+├── 音频层
+│   ├── audiocapturer.{h,cpp}       # 麦克风采集（Qt Multimedia）
+│   ├── systemaudiocapturer.{h,cpp} # 系统声音 loopback（WASAPI，独立线程）
+│   ├── audiomixer.{h,cpp}          # 双路 PCM 混音、重采样、ducking
+│   └── audioplayer.{h,cpp}         # PCM 播放（Qt Multimedia）
+│
+├── 发送层
+│   └── sender.{h,cpp}              # 多路媒体流汇聚、优先级队列、协议封包
+│
+├── 批注层
+│   ├── annotationoverlay.{h,cpp}   # 透明绘图层（笔迹/橡皮/文字/撤销/重做）
+│   └── annotationwindow.{h,cpp}    # 全屏透明顶层批注窗口
+│
+├── UI 层
+│   ├── meetingmainwindow.{h,cpp}   # 会议主窗口，协调所有模块
+│   ├── sharesourcepicker.{h,cpp}   # 共享源选择对话框
+│   ├── sharetoolbar.{h,cpp}        # 悬浮共享控制工具条
+│   └── localpreviewwindow.{h,cpp}  # 本地预览窗口
+│
+├── CMakeLists.txt                  # 构建配置
+└── docs/                           # 技术文档
+    ├── ARCHITECTURE.md
+    ├── CAPTURE.md
+    ├── AUDIO.md
+    ├── NETWORK.md
+    ├── UI.md
+    ├── ANNOTATION.md
+    └── BUILD.md
+```
 
 ---
 
