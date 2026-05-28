@@ -1,0 +1,13 @@
+# macOS / Finder
+.DS_Store
+
+# qmake / Qt build artifacts
+.qmake.stash
+Makefile
+moc_*.cpp
+*.o
+*.app/
+
+# Optional local build directories
+build/
+out/
