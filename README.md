@@ -42,6 +42,12 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
 cmake --build build --parallel
 ```
 
+## 运行测试
+
+```bash
+cmake --build build --target test    # 或 ctest --test-dir build --output-on-failure
+```
+
 详细构建步骤、依赖库说明及常见问题，请参见 [docs/BUILD.md](docs/BUILD.md)。
 
 ---
@@ -57,6 +63,7 @@ cmake --build build --parallel
 | [docs/UI.md](docs/UI.md) | 会议主窗口、共享源选择、悬浮工具条、本地预览窗口 |
 | [docs/ANNOTATION.md](docs/ANNOTATION.md) | 批注层数据结构、渲染、撤销/重做、远端同步 |
 | [docs/BUILD.md](docs/BUILD.md) | 环境依赖、编译步骤、Qt Creator 集成、常见问题 |
+| [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md) | 屏幕共享、窗口共享、批注、音频与退出稳定性的手动验证清单 |
 
 ---
 

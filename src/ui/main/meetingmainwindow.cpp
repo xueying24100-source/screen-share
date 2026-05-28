@@ -37,6 +37,24 @@
 
 namespace {
 
+template <typename T>
+void deleteObjectInOwnThread(T*& object)
+{
+    T* obj = object;
+    object = nullptr;
+    if (!obj) {
+        return;
+    }
+
+    QThread* objectThread = obj->thread();
+    if (!objectThread || objectThread == QThread::currentThread() || !objectThread->isRunning()) {
+        delete obj;
+        return;
+    }
+
+    QMetaObject::invokeMethod(obj, [obj]() { obj->deleteLater(); }, Qt::BlockingQueuedConnection);
+}
+
 double calculateMicDbFs(const QByteArray& pcm)
 {
     const int sampleCount = pcm.size() / static_cast<int>(sizeof(qint16));
@@ -101,13 +119,14 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     : QMainWindow(parent)
     // Audio/capture objects created WITHOUT parent so moveToThread works
     , m_capturer(new ScreenCapturer())
-    , m_sender(new Sender(this))
+    , m_sender(new Sender())
     , m_audioCapturer(new AudioCapturer())
     , m_systemAudioCapturer(new SystemAudioCapturer())
     , m_audioMixer(new AudioMixer())
     , m_localPlayback(new AudioPlayer())
     , m_audioThread(new QThread(this))
     , m_captureThread(new QThread(this))
+    , m_senderThread(new QThread(this))
     , m_toolbar(new ShareToolbar())
     , m_windowFollowTimer(new QTimer(this))
     , m_previewRefreshTimer(new QTimer(this))
@@ -118,13 +137,18 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     m_audioCapturer->moveToThread(m_audioThread);
     m_systemAudioCapturer->moveToThread(m_audioThread);
     m_audioMixer->moveToThread(m_audioThread);
+    m_localPlayback->moveToThread(m_audioThread);
 
     // ── Move screen capturer to dedicated capture thread ──────────────────
     m_capturer->moveToThread(m_captureThread);
 
+    // ── Move sender to dedicated sender thread ────────────────────────────
+    m_sender->moveToThread(m_senderThread);
+
     // ── Start worker threads ───────────────────────────────────────────────
     m_audioThread->start();
     m_captureThread->start();
+    m_senderThread->start();
 
     // ── UI layout ─────────────────────────────────────────────────────────
     auto* central = new QWidget(this);
@@ -238,10 +262,12 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             format.setSampleRate(16000);
             format.setChannelCount(1);
             format.setSampleFormat(QAudioFormat::Int16);
-            m_localPlayback->start(format);
+            auto* player = m_localPlayback;
+            QMetaObject::invokeMethod(player, [player, format]() { player->start(format); }, Qt::QueuedConnection);
             return;
         }
-        m_localPlayback->stop();
+        auto* player = m_localPlayback;
+        QMetaObject::invokeMethod(player, [player]() { player->stop(); }, Qt::QueuedConnection);
     });
     connect(m_localPlayback, &AudioPlayer::playerError, this,
             [this](const QString& msg) {
@@ -253,12 +279,12 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             });
 
     connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
-    m_previewRefreshTimer->setSingleShot(true);
-    m_previewRefreshTimer->setInterval(30);
+    m_previewRefreshTimer->setInterval(33);
     connect(m_previewRefreshTimer, &QTimer::timeout, this, [this]() {
-        if (!m_preview || m_lastRawFrame.isNull()) {
+        if (!m_sharing || !m_preview || m_lastRawFrame.isNull() || !m_previewDirty) {
             return;
         }
+        m_previewDirty = false;
         m_preview->updateFrame(composeFrameWithAnnotations(m_lastRawFrame));
     });
 
@@ -279,7 +305,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             this, &MeetingMainWindow::handleCaptureError,
             Qt::QueuedConnection);
 
-    // Audio capturer (audio thread) → sender (main thread) – queued cross-thread
+    // Audio capturer (audio thread) → sender (sender thread)
     connect(m_audioCapturer, &AudioCapturer::audioDataReady,
             m_sender, &Sender::onAudioDataReady,
             Qt::QueuedConnection);
@@ -297,7 +323,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
                 }
             }, Qt::QueuedConnection);
 
-    // System audio (audio thread) → sender (main thread)
+    // System audio (audio thread) → sender (sender thread)
     connect(m_systemAudioCapturer, &SystemAudioCapturer::systemAudioDataReady,
             m_sender, [senderPtr = m_sender](const QByteArray& pcm, int, int) {
                 senderPtr->onAudioDataReady(pcm);
@@ -326,9 +352,12 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             this, &MeetingMainWindow::onMixedAudio,
             Qt::QueuedConnection);
 
-    static DebugTransport s_debugTransport;
-    m_sender->setTransport(&s_debugTransport);
-    m_sender->start();
+    auto* sender = m_sender;
+    QMetaObject::invokeMethod(sender, [sender]() {
+        static DebugTransport s_debugTransport;
+        sender->setTransport(&s_debugTransport);
+        sender->start();
+    }, Qt::BlockingQueuedConnection);
 
     m_toolbar->hide();
 }
@@ -338,7 +367,16 @@ MeetingMainWindow::~MeetingMainWindow()
     qDebug() << "[Meeting] dtor begin";
     stopSharing();
 
-    m_sender->stop();
+    if (m_sender) {
+        QMetaObject::invokeMethod(m_sender, [sender = m_sender]() { sender->stop(); }, Qt::BlockingQueuedConnection);
+    }
+
+    deleteObjectInOwnThread(m_audioCapturer);
+    deleteObjectInOwnThread(m_systemAudioCapturer);
+    deleteObjectInOwnThread(m_audioMixer);
+    deleteObjectInOwnThread(m_localPlayback);
+    deleteObjectInOwnThread(m_capturer);
+    deleteObjectInOwnThread(m_sender);
 
     // ── Stop audio thread ──────────────────────────────────────────────────
     if (m_audioThread) {
@@ -352,12 +390,10 @@ MeetingMainWindow::~MeetingMainWindow()
         m_captureThread->wait(2000);
     }
 
-    // ── Delete cross-thread objects (their threads are already stopped) ────
-    delete m_audioCapturer; m_audioCapturer = nullptr;
-    delete m_systemAudioCapturer; m_systemAudioCapturer = nullptr;
-    delete m_audioMixer; m_audioMixer = nullptr;
-    delete m_localPlayback; m_localPlayback = nullptr;
-    delete m_capturer; m_capturer = nullptr;
+    if (m_senderThread) {
+        m_senderThread->quit();
+        m_senderThread->wait(2000);
+    }
 
     // ── Delete main-thread UI objects ──────────────────────────────────────
     if (m_toolbar) {
@@ -391,6 +427,7 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
     m_currentSelection = selection;
     m_lastCaptureError.clear();
     m_shareStartPending = true;
+    m_previewDirty = false;
     const int requestId = ++m_shareStartRequestId;
 
     // Set WGC options on capture thread (queued, processed before startWindow/startScreen)
@@ -487,6 +524,7 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
 
         m_sharing = true;
         m_shareStartPending = false;
+        m_previewRefreshTimer->start();
         m_endButton->setEnabled(true);
     });
 }
@@ -502,9 +540,13 @@ void MeetingMainWindow::stopSharing()
     m_shareStartPending = false;
     m_windowFollowTimer->stop();
     m_previewRefreshTimer->stop();
+    m_previewDirty = false;
 
     // Stop audio pipeline
-    m_localPlayback->stop();
+    {
+        auto* player = m_localPlayback;
+        QMetaObject::invokeMethod(player, [player]() { player->stop(); }, Qt::QueuedConnection);
+    }
     {
         auto* mixer = m_audioMixer;
         QMetaObject::invokeMethod(mixer, [mixer]() { mixer->reset(); }, Qt::QueuedConnection);
@@ -645,27 +687,37 @@ void MeetingMainWindow::onFrameCaptured(const QImage& frame)
 {
     Q_ASSERT(QThread::currentThread() == this->thread());
 
+    if (!m_capturer) {
+        return;
+    }
+    if (!m_sharing && !m_shareStartPending) {
+        m_capturer->releaseFrameSlot();
+        return;
+    }
     if (frame.isNull() || frame.width() <= 0 || frame.height() <= 0) {
+        m_capturer->releaseFrameSlot();
         return;
     }
 
     m_lastCaptureError.clear();
-    QImage processedFrame = frame;
-    if (processedFrame.width() > 1280 || processedFrame.height() > 720) {
-        processedFrame = processedFrame.scaled(1280, 720,
-                                               Qt::KeepAspectRatio,
-                                               Qt::FastTransformation);
-    }
-    m_lastRawFrame = processedFrame;
+    m_lastRawFrame = frame;
 
-    const QImage composedFrame = composeFrameWithAnnotations(processedFrame);
+    const QImage composedFrame = composeFrameWithAnnotations(frame);
     if (composedFrame.isNull()) {
+        m_capturer->releaseFrameSlot();
         return;
     }
-    m_sender->onMainScreenFrameCaptured(composedFrame);
-    if (m_preview) {
-        m_preview->updateFrame(composedFrame);
+    if (m_sender) {
+        auto* sender = m_sender;
+        QMetaObject::invokeMethod(sender,
+                                  [sender, composedFrame]() { sender->onMainScreenFrameCaptured(composedFrame); },
+                                  Qt::QueuedConnection);
     }
+    m_previewDirty = true;
+    if (m_preview && !m_previewRefreshTimer->isActive()) {
+        m_previewRefreshTimer->start();
+    }
+    m_capturer->releaseFrameSlot();
 
     if (!m_frameLogTimer.isValid() || m_frameLogTimer.elapsed() >= 1000) {
         m_frameLogTimer.restart();
@@ -680,7 +732,10 @@ void MeetingMainWindow::refreshPreviewComposite()
     if (!m_preview || m_lastRawFrame.isNull()) {
         return;
     }
-    m_previewRefreshTimer->start();
+    m_previewDirty = true;
+    if (!m_previewRefreshTimer->isActive()) {
+        m_previewRefreshTimer->start();
+    }
 }
 
 QImage MeetingMainWindow::composeFrameWithAnnotations(const QImage& frame)
