@@ -96,6 +96,7 @@ Sender::Sender(QObject* parent)
     , m_videoEncoder(new JpegVideoEncoder)
     , m_audioEncoder(new PcmAudioEncoder)
 {
+    m_sendTimer.setParent(this);
     m_sendTimer.setInterval(5);
     connect(&m_sendTimer, &QTimer::timeout, this, &Sender::processSendLoop);
 
