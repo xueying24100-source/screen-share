@@ -1,5 +1,5 @@
-#include "annotationoverlay.h"
-#include "annotationwindow.h"
+#include "ui/annotation/annotationoverlay.h"
+#include "ui/annotation/annotationwindow.h"
 
 #include <QEvent>
 #include <QFocusEvent>

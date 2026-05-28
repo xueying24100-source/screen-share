@@ -1,4 +1,4 @@
-#include "localpreviewwindow.h"
+#include "ui/preview/localpreviewwindow.h"
 
 #include <QDateTime>
 #include <QPainter>

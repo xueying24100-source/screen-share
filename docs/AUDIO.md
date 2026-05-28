@@ -6,10 +6,10 @@
 
 | 类 | 文件 | 职责 |
 |----|------|------|
-| `AudioCapturer` | `audiocapturer.{h,cpp}` | 麦克风 PCM 采集（Qt Multimedia）|
-| `SystemAudioCapturer` | `systemaudiocapturer.{h,cpp}` | 系统声音 loopback 采集（WASAPI，独立线程）|
-| `AudioMixer` | `audiomixer.{h,cpp}` | 双路 PCM 混音、重采样、duck 策略 |
-| `AudioPlayer` | `audioplayer.{h,cpp}` | PCM 数据播放（Qt Multimedia）|
+| `AudioCapturer` | `src/media/capture/audio/audiocapturer.{h,cpp}` | 麦克风 PCM 采集（Qt Multimedia）|
+| `SystemAudioCapturer` | `src/media/capture/audio/systemaudiocapturer.{h,cpp}` | 系统声音 loopback 采集（WASAPI，独立线程）|
+| `AudioMixer` | `src/media/mixer/audiomixer.{h,cpp}` | 双路 PCM 混音、重采样、duck 策略 |
+| `AudioPlayer` | `src/media/playback/audioplayer.{h,cpp}` | PCM 数据播放（Qt Multimedia）|
 
 ---
 
@@ -109,7 +109,7 @@ flowchart TD
     G --> H
 ```
 
-**关键常量（定义于 `audiomixer.h`）：**
+**关键常量（定义于 `src/media/mixer/audiomixer.h`）：**
 
 | 常量 | 值 | 说明 |
 |------|----|------|

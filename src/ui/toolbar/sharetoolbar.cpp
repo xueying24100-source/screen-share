@@ -1,4 +1,4 @@
-#include "sharetoolbar.h"
+#include "ui/toolbar/sharetoolbar.h"
 
 #include <QEnterEvent>
 #include <QCheckBox>

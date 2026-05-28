@@ -1,14 +1,14 @@
-#include "meetingmainwindow.h"
+#include "ui/main/meetingmainwindow.h"
 
-#include "annotationwindow.h"
-#include "audiocapturer.h"
-#include "audiomixer.h"
-#include "audioplayer.h"
-#include "localpreviewwindow.h"
-#include "screencapturer.h"
-#include "sender.h"
-#include "sharetoolbar.h"
-#include "systemaudiocapturer.h"
+#include "ui/annotation/annotationwindow.h"
+#include "media/capture/audio/audiocapturer.h"
+#include "media/mixer/audiomixer.h"
+#include "media/playback/audioplayer.h"
+#include "ui/preview/localpreviewwindow.h"
+#include "media/capture/screen/screencapturer.h"
+#include "network/sender.h"
+#include "ui/toolbar/sharetoolbar.h"
+#include "media/capture/audio/systemaudiocapturer.h"
 
 #include <QApplication>
 #include <QGuiApplication>

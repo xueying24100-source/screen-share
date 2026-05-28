@@ -1,4 +1,4 @@
-#include "sender.h"
+#include "network/sender.h"
 
 #include <QBuffer>
 #include <QDataStream>

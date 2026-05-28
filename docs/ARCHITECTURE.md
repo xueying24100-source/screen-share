@@ -11,31 +11,31 @@ Screen Share 是一个基于 Qt6 + C++20 的 Windows 桌面屏幕共享/会议�
 ```mermaid
 graph TD
     subgraph 采集层
-        SC[ScreenCapturer<br/>screencapturer.h/cpp]
-        WGC[WgcWindowCaptureBackend<br/>wgcwindowcapturebackend.h/cpp]
-        AC[AudioCapturer<br/>audiocapturer.h/cpp]
-        SAC[SystemAudioCapturer<br/>systemaudiocapturer.h/cpp]
+        SC[ScreenCapturer<br/>src/media/capture/screen/screencapturer.h/cpp]
+        WGC[WgcWindowCaptureBackend<br/>src/platform/windows/wgc/wgcwindowcapturebackend.h/cpp]
+        AC[AudioCapturer<br/>src/media/capture/audio/audiocapturer.h/cpp]
+        SAC[SystemAudioCapturer<br/>systemsrc/media/capture/audio/audiocapturer.h/cpp]
     end
 
     subgraph 处理层
-        AM[AudioMixer<br/>audiomixer.h/cpp]
-        SE[SourceEnumerator<br/>sourceenumerator.h/cpp]
+        AM[AudioMixer<br/>src/media/mixer/audiomixer.h/cpp]
+        SE[SourceEnumerator<br/>src/media/capture/screen/sourceenumerator.h/cpp]
     end
 
     subgraph 发送层
-        SND[Sender<br/>sender.h/cpp]
+        SND[Sender<br/>src/network/sender.h/cpp]
     end
 
     subgraph UI层
-        MMW[MeetingMainWindow<br/>meetingmainwindow.h/cpp]
-        SSP[ShareSourcePicker<br/>sharesourcepicker.h/cpp]
-        ST[ShareToolbar<br/>sharetoolbar.h/cpp]
-        LPW[LocalPreviewWindow<br/>localpreviewwindow.h/cpp]
-        AW[AnnotationWindow<br/>annotationwindow.h/cpp]
-        AO[AnnotationOverlay<br/>annotationoverlay.h/cpp]
-        AP[AudioPlayer<br/>audioplayer.h/cpp]
-        WTW[WgcTestWindow<br/>wgctestwindow.h/cpp]
-        MW[MainWindow<br/>mainwindow.h/cpp]
+        MMW[MeetingMainWindow<br/>src/ui/main/meetingsrc/ui/main/mainwindow.h/cpp]
+        SSP[ShareSourcePicker<br/>src/ui/picker/sharesourcepicker.h/cpp]
+        ST[ShareToolbar<br/>src/ui/toolbar/sharetoolbar.h/cpp]
+        LPW[LocalPreviewWindow<br/>src/ui/preview/localpreviewwindow.h/cpp]
+        AW[AnnotationWindow<br/>src/ui/annotation/annotationwindow.h/cpp]
+        AO[AnnotationOverlay<br/>src/ui/annotation/annotationoverlay.h/cpp]
+        AP[AudioPlayer<br/>src/media/playback/audioplayer.h/cpp]
+        WTW[WgcTestWindow<br/>src/platform/windows/debug/wgctestwindow.h/cpp]
+        MW[MainWindow<br/>src/ui/main/mainwindow.h/cpp]
     end
 
     SC -->|frameCaptured| MMW
@@ -101,22 +101,22 @@ Sender（打包发送）
 
 | 模块 | 所在文件 | 职责 |
 |------|---------|------|
-| `ScreenCapturer` | `screencapturer.{h,cpp}` | 屏幕/窗口定时采集，多后端（DXGI / WGC / GDI / GrabWindow）切换 |
-| `WgcWindowCaptureBackend` | `wgcwindowcapturebackend.{h,cpp}` | Windows Graphics Capture 后端封装 |
-| `WgcTestWindow` | `wgctestwindow.{h,cpp}` | WGC 功能独立测试窗口（开发调试用）|
-| `SourceEnumerator` | `sourceenumerator.{h,cpp}` | 枚举系统屏幕和可见窗口 |
-| `AudioCapturer` | `audiocapturer.{h,cpp}` | 麦克风 PCM 采集（Qt Multimedia）|
-| `SystemAudioCapturer` | `systemaudiocapturer.{h,cpp}` | 系统声音 loopback 采集（WASAPI，独立线程）|
-| `AudioMixer` | `audiomixer.{h,cpp}` | 麦克风 + 系统声音混音、重采样、duck 策略 |
-| `AudioPlayer` | `audioplayer.{h,cpp}` | PCM 数据回放（Qt Multimedia）|
-| `Sender` | `sender.{h,cpp}` | 多路媒体流汇聚、优先级调度、协议封包 |
-| `AnnotationOverlay` | `annotationoverlay.{h,cpp}` | 透明批注绘图层（笔迹、橡皮、文字、撤销/重做）|
-| `AnnotationWindow` | `annotationwindow.{h,cpp}` | 承载 `AnnotationOverlay` 的全屏透明顶层窗口 |
-| `MeetingMainWindow` | `meetingmainwindow.{h,cpp}` | 会议主窗口，协调所有模块生命周期 |
-| `ShareSourcePicker` | `sharesourcepicker.{h,cpp}` | 共享源选择对话框（屏幕/窗口/选项）|
-| `ShareToolbar` | `sharetoolbar.{h,cpp}` | 悬浮共享控制工具条 |
-| `LocalPreviewWindow` | `localpreviewwindow.{h,cpp}` | 本地预览窗口（帧预览 + 音频电平可视化）|
-| `MainWindow` | `mainwindow.{h,cpp}` | 应用入口窗口（目前直接打开 `AnnotationWindow` 供调试）|
+| `ScreenCapturer` | `src/media/capture/screen/screencapturer.{h,cpp}` | 屏幕/窗口定时采集，多后端（DXGI / WGC / GDI / GrabWindow）切换 |
+| `WgcWindowCaptureBackend` | `src/platform/windows/wgc/wgcwindowcapturebackend.{h,cpp}` | Windows Graphics Capture 后端封装 |
+| `WgcTestWindow` | `src/platform/windows/debug/wgctestwindow.{h,cpp}` | WGC 功能独立测试窗口（开发调试用）|
+| `SourceEnumerator` | `src/media/capture/screen/sourceenumerator.{h,cpp}` | 枚举系统屏幕和可见窗口 |
+| `AudioCapturer` | `src/media/capture/audio/audiocapturer.{h,cpp}` | 麦克风 PCM 采集（Qt Multimedia）|
+| `SystemAudioCapturer` | `src/media/capture/audio/systemaudiocapturer.{h,cpp}` | 系统声音 loopback 采集（WASAPI，独立线程）|
+| `AudioMixer` | `src/media/mixer/audiomixer.{h,cpp}` | 麦克风 + 系统声音混音、重采样、duck 策略 |
+| `AudioPlayer` | `src/media/playback/audioplayer.{h,cpp}` | PCM 数据回放（Qt Multimedia）|
+| `Sender` | `src/network/sender.{h,cpp}` | 多路媒体流汇聚、优先级调度、协议封包 |
+| `AnnotationOverlay` | `src/ui/annotation/annotationoverlay.{h,cpp}` | 透明批注绘图层（笔迹、橡皮、文字、撤销/重做）|
+| `AnnotationWindow` | `src/ui/annotation/annotationwindow.{h,cpp}` | 承载 `AnnotationOverlay` 的全屏透明顶层窗口 |
+| `MeetingMainWindow` | `src/ui/main/meetingmainwindow.{h,cpp}` | 会议主窗口，协调所有模块生命周期 |
+| `ShareSourcePicker` | `src/ui/picker/sharesourcepicker.{h,cpp}` | 共享源选择对话框（屏幕/窗口/选项）|
+| `ShareToolbar` | `src/ui/toolbar/sharetoolbar.{h,cpp}` | 悬浮共享控制工具条 |
+| `LocalPreviewWindow` | `src/ui/preview/localpreviewwindow.{h,cpp}` | 本地预览窗口（帧预览 + 音频电平可视化）|
+| `MainWindow` | `src/ui/main/mainwindow.{h,cpp}` | 应用入口窗口（目前直接打开 `AnnotationWindow` 供调试）|
 
 ---
 

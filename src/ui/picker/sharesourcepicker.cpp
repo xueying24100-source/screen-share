@@ -1,6 +1,6 @@
-#include "sharesourcepicker.h"
+#include "ui/picker/sharesourcepicker.h"
 
-#include "sourceenumerator.h"
+#include "media/capture/screen/sourceenumerator.h"
 
 #include <QCheckBox>
 #include <QComboBox>

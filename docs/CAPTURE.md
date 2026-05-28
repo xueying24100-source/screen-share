@@ -6,15 +6,15 @@
 
 | 类 | 文件 | 职责 |
 |----|------|------|
-| `ScreenCapturer` | `screencapturer.{h,cpp}` | 定时触发采集、多后端切换、黑帧检测、信号发射 |
-| `WgcWindowCaptureBackend` | `wgcwindowcapturebackend.{h,cpp}` | Windows Graphics Capture (WGC) 后端封装 |
+| `ScreenCapturer` | `src/media/capture/screen/screencapturer.{h,cpp}` | 定时触发采集、多后端切换、黑帧检测、信号发射 |
+| `WgcWindowCaptureBackend` | `src/platform/windows/wgc/wgcwindowcapturebackend.{h,cpp}` | Windows Graphics Capture (WGC) 后端封装 |
 
 辅助类：
 
 | 类 | 文件 | 职责 |
 |----|------|------|
-| `SourceEnumerator` | `sourceenumerator.{h,cpp}` | 枚举屏幕与可见窗口，供 UI 层使用 |
-| `WgcTestWindow` | `wgctestwindow.{h,cpp}` | WGC 窗口采集独立测试/调试窗口 |
+| `SourceEnumerator` | `src/media/capture/screen/sourceenumerator.{h,cpp}` | 枚举屏幕与可见窗口，供 UI 层使用 |
+| `WgcTestWindow` | `src/platform/windows/debug/wgctestwindow.{h,cpp}` | WGC 窗口采集独立测试/调试窗口 |
 
 ---
 
@@ -45,7 +45,7 @@
 
 ### CaptureFrameMetadata
 
-定义于 `screencapturer.h`：
+定义于 `src/media/capture/screen/screencapturer.h`：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -178,7 +178,7 @@ stateDiagram-v2
 
 ## WgcWindowCaptureBackend 接口
 
-定义于 `wgcwindowcapturebackend.h`，使用 Pimpl 封装 WinRT/C++/WinRT 依赖：
+定义于 `src/platform/windows/wgc/wgcwindowcapturebackend.h`，使用 Pimpl 封装 WinRT/C++/WinRT 依赖：
 
 | 方法 | 说明 |
 |------|------|
@@ -196,7 +196,7 @@ stateDiagram-v2
 
 ## SourceEnumerator 接口
 
-定义于 `sourceenumerator.h`，提供静态枚举方法：
+定义于 `src/media/capture/screen/sourceenumerator.h`，提供静态枚举方法：
 
 ```cpp
 // 枚举所有屏幕
@@ -214,7 +214,7 @@ QList<WindowInfo> windows = SourceEnumerator::enumerateWindows();
 
 ## WgcTestWindow
 
-`wgctestwindow.{h,cpp}` 是一个独立的 Qt 调试窗口，内嵌一个 `ScreenCapturer` 实例，用于在开发阶段单独验证 WGC 后端的帧采集效果和元数据统计，不参与正式会议流程。
+`src/platform/windows/debug/wgctestwindow.{h,cpp}` 是一个独立的 Qt 调试窗口，内嵌一个 `ScreenCapturer` 实例，用于在开发阶段单独验证 WGC 后端的帧采集效果和元数据统计，不参与正式会议流程。
 
 ---
 

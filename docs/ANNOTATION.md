@@ -6,14 +6,14 @@
 
 | 类 | 文件 | 职责 |
 |----|------|------|
-| `AnnotationOverlay` | `annotationoverlay.{h,cpp}` | 透明绘图层，处理鼠标输入、笔迹渲染、文字批注、撤销/重做 |
-| `AnnotationWindow` | `annotationwindow.{h,cpp}` | 承载 `AnnotationOverlay` 的全屏透明顶层窗口，处理窗口生命周期 |
+| `AnnotationOverlay` | `src/ui/annotation/annotationoverlay.{h,cpp}` | 透明绘图层，处理鼠标输入、笔迹渲染、文字批注、撤销/重做 |
+| `AnnotationWindow` | `src/ui/annotation/annotationwindow.{h,cpp}` | 承载 `AnnotationOverlay` 的全屏透明顶层窗口，处理窗口生命周期 |
 
 ---
 
 ## 数据结构
 
-所有批注相关数据结构定义于 `annotationoverlay.h`。
+所有批注相关数据结构定义于 `src/ui/annotation/annotationoverlay.h`。
 
 ### Stroke（完整笔划）
 

@@ -7,7 +7,7 @@
 #include <QString>
 #include <QThread>
 
-#include "sharesourcepicker.h"
+#include "ui/picker/sharesourcepicker.h"
 
 class AnnotationWindow;
 class AudioCapturer;

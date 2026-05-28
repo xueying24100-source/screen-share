@@ -5,7 +5,7 @@
 #include <QString>
 #include <QWidget>
 
-#include "screencapturer.h"
+#include "media/capture/screen/screencapturer.h"
 
 class QLabel;
 class QResizeEvent;

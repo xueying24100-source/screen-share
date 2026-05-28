@@ -64,43 +64,58 @@ cmake --build build --parallel
 
 ```
 screen-share/
-├── main.cpp                        # 程序入口，初始化 WinRT 公寓并启动 MeetingMainWindow
-├── mainwindow.{h,cpp}              # 应用入口窗口（调试用）
-│
-├── 采集层
-│   ├── screencapturer.{h,cpp}      # 屏幕/窗口采集，DXGI / WGC / GDI / GrabWindow 多后端
-│   ├── wgcwindowcapturebackend.{h,cpp}  # Windows Graphics Capture 后端（C++/WinRT）
-│   ├── wgctestwindow.{h,cpp}       # WGC 独立调试窗口
-│   └── sourceenumerator.{h,cpp}    # 枚举屏幕和可见窗口
-│
-├── 音频层
-│   ├── audiocapturer.{h,cpp}       # 麦克风采集（Qt Multimedia）
-│   ├── systemaudiocapturer.{h,cpp} # 系统声音 loopback（WASAPI，独立线程）
-│   ├── audiomixer.{h,cpp}          # 双路 PCM 混音、重采样、ducking
-│   └── audioplayer.{h,cpp}         # PCM 播放（Qt Multimedia）
-│
-├── 发送层
-│   └── sender.{h,cpp}              # 多路媒体流汇聚、优先级队列、协议封包
-│
-├── 批注层
-│   ├── annotationoverlay.{h,cpp}   # 透明绘图层（笔迹/橡皮/文字/撤销/重做）
-│   └── annotationwindow.{h,cpp}    # 全屏透明顶层批注窗口
-│
-├── UI 层
-│   ├── meetingmainwindow.{h,cpp}   # 会议主窗口，协调所有模块
-│   ├── sharesourcepicker.{h,cpp}   # 共享源选择对话框
-│   ├── sharetoolbar.{h,cpp}        # 悬浮共享控制工具条
-│   └── localpreviewwindow.{h,cpp}  # 本地预览窗口
-│
-├── CMakeLists.txt                  # 构建配置
-└── docs/                           # 技术文档
-    ├── ARCHITECTURE.md
-    ├── CAPTURE.md
-    ├── AUDIO.md
-    ├── NETWORK.md
-    ├── UI.md
-    ├── ANNOTATION.md
-    └── BUILD.md
+├── CMakeLists.txt
+├── README.md
+├── docs/                              # 技术文档
+│   ├── ARCHITECTURE.md
+│   ├── CAPTURE.md
+│   ├── AUDIO.md
+│   ├── NETWORK.md
+│   ├── UI.md
+│   ├── ANNOTATION.md
+│   └── BUILD.md
+└── src/
+    ├── app/
+    │   └── main.cpp                   # 程序入口，初始化 WinRT 公寓并启动 MeetingMainWindow
+    │
+    ├── ui/
+    │   ├── main/
+    │   │   ├── mainwindow.{h,cpp}     # 应用入口窗口（调试用）
+    │   │   ├── meetingmainwindow.{h,cpp}  # 会议主窗口，协调所有模块
+    │   ├── picker/
+    │   │   └── sharesourcepicker.{h,cpp}  # 共享源选择对话框
+    │   ├── toolbar/
+    │   │   └── sharetoolbar.{h,cpp}   # 悬浮共享控制工具条
+    │   ├── preview/
+    │   │   └── localpreviewwindow.{h,cpp}  # 本地预览窗口
+    │   └── annotation/
+    │       ├── annotationoverlay.{h,cpp}   # 透明绘图层（笔迹/橡皮/文字/撤销/重做）
+    │       └── annotationwindow.{h,cpp}    # 全屏透明顶层批注窗口
+    │
+    ├── media/
+    │   ├── capture/
+    │   │   ├── screen/
+    │   │   │   ├── screencapturer.{h,cpp}      # 屏幕/窗口采集，多后端（DXGI/WGC/GDI）
+    │   │   │   └── sourceenumerator.{h,cpp}    # 枚举屏幕和可见窗口
+    │   │   └── audio/
+    │   │       ├── audiocapturer.{h,cpp}       # 麦克风采集（Qt Multimedia）
+    │   │       └── systemaudiocapturer.{h,cpp} # 系统声音 loopback（WASAPI，独立线程）
+    │   ├── mixer/
+    │   │   └── audiomixer.{h,cpp}              # 双路 PCM 混音、重采样、ducking
+    │   └── playback/
+    │       └── audioplayer.{h,cpp}             # PCM 播放（Qt Multimedia）
+    │
+    ├── network/
+    │   └── sender.{h,cpp}             # 多路媒体流汇聚、优先级队列、协议封包
+    │
+    ├── platform/
+    │   └── windows/
+    │       ├── wgc/
+    │       │   └── wgcwindowcapturebackend.{h,cpp}  # Windows Graphics Capture 后端
+    │       └── debug/
+    │           └── wgctestwindow.{h,cpp}            # WGC 独立调试窗口
+    │
+    └── common/                        # 预留通用工具（暂空）
 ```
 
 ---

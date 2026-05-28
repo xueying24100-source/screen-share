@@ -1,4 +1,4 @@
-#include "audiomixer.h"
+#include "media/mixer/audiomixer.h"
 
 #include <QDateTime>
 #include <QDebug>
