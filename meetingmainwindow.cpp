@@ -118,7 +118,6 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     m_audioCapturer->moveToThread(m_audioThread);
     m_systemAudioCapturer->moveToThread(m_audioThread);
     m_audioMixer->moveToThread(m_audioThread);
-    m_localPlayback->moveToThread(m_audioThread);
 
     // ── Move screen capturer to dedicated capture thread ──────────────────
     m_capturer->moveToThread(m_captureThread);
@@ -226,7 +225,7 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
     });
     connect(m_toolbar, &ShareToolbar::stopRequested, this, &MeetingMainWindow::stopSharing);
 
-    // Local playback toggle: queued to audio thread
+    // Local playback toggle
     connect(m_toolbar, &ShareToolbar::localPlaybackToggled, this, [this](bool enabled) {
         if (enabled) {
             if (!m_localPlaybackWarningShown) {
@@ -239,12 +238,10 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
             format.setSampleRate(16000);
             format.setChannelCount(1);
             format.setSampleFormat(QAudioFormat::Int16);
-            auto* player = m_localPlayback;
-            QMetaObject::invokeMethod(player, [player, format]() { player->start(format); }, Qt::QueuedConnection);
+            m_localPlayback->start(format);
             return;
         }
-        auto* player = m_localPlayback;
-        QMetaObject::invokeMethod(player, [player]() { player->stop(); }, Qt::QueuedConnection);
+        m_localPlayback->stop();
     });
 
     connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
@@ -495,11 +492,8 @@ void MeetingMainWindow::stopSharing()
     m_windowFollowTimer->stop();
     m_previewRefreshTimer->stop();
 
-    // Stop audio pipeline (queued to audio thread)
-    {
-        auto* player = m_localPlayback;
-        QMetaObject::invokeMethod(player, [player]() { player->stop(); }, Qt::QueuedConnection);
-    }
+    // Stop audio pipeline
+    m_localPlayback->stop();
     {
         auto* mixer = m_audioMixer;
         QMetaObject::invokeMethod(mixer, [mixer]() { mixer->reset(); }, Qt::QueuedConnection);
