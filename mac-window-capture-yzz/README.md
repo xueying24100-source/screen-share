@@ -1,6 +1,6 @@
 # macOS 窗口采集 Demo
 
-这是 `yzz` 分支的 macOS 窗口枚举与采集 demo，接口形状对齐 Windows 采集分支：
+这是 `yzz` 分支的 macOS 窗口枚举与采集 demo
 
 - `SourceEnumerator::enumerateScreens()`
 - `SourceEnumerator::enumerateWindows()`
