@@ -4,7 +4,6 @@
 #endif
 #include <QObject>
 #include <QImage>
-#include <QPixmap>
 #include <QRect>
 #include <QSize>
 #include <QTimer>
@@ -63,7 +62,7 @@ private:
     void captureWithGrabWindow();
     void captureWithGdiWindow();
     void emitFrameWithStats(const QImage& frame, const QString& backendName, const QSize& sourceSize);
-    bool pixmapLooksMostlyBlack(const QPixmap& pixmap) const;
+    bool imageLooksMostlyBlack(const QImage& image) const;
 
     QTimer* m_timer;
     QSize   m_outputSize{1280, 720};

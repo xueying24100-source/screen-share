@@ -202,8 +202,7 @@ void ScreenCapturer::captureFrame()
                     m_lastWgcFrame = frame;
                     m_lastWgcFrameTimeMs = QDateTime::currentMSecsSinceEpoch();
                     // 黑帧检测
-                    QPixmap tmp = QPixmap::fromImage(frame);
-                    if (pixmapLooksMostlyBlack(tmp)) {
+                    if (imageLooksMostlyBlack(frame)) {
                         ++m_blackFrameCount;
                         if (m_blackFrameCount >= m_blackFrameThreshold) {
                             emit captureError(QStringLiteral("WGC 连续黑帧，已降级到 GDI 捕获"));
@@ -482,7 +481,7 @@ void ScreenCapturer::captureWithGdiWindow()
         return;
     }
 
-    auto captureFromDC = [&](bool usePrintWindow) -> QPixmap {
+    auto captureFromDC = [&](bool usePrintWindow) -> QImage {
         HDC screenDc = GetDC(nullptr);
         if (!screenDc) return {};
         HDC memDc = CreateCompatibleDC(screenDc);
@@ -502,7 +501,7 @@ void ScreenCapturer::captureWithGdiWindow()
             }
         }
 
-        QPixmap result;
+        QImage result;
         if (ok) {
             BITMAPINFO bmi{};
             bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
@@ -517,7 +516,7 @@ void ScreenCapturer::captureWithGdiWindow()
                 if (GetDIBits(memDc, bitmap, 0,
                               static_cast<UINT>(height),
                               image.bits(), &bmi, DIB_RGB_COLORS) > 0) {
-                    result = QPixmap::fromImage(image);
+                    result = image;
                 }
             }
         }
@@ -530,26 +529,29 @@ void ScreenCapturer::captureWithGdiWindow()
     };
 
     QString backendUsed;
-    QPixmap pixmap = captureFromDC(true);
-    if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+    QImage capturedImage = captureFromDC(true);
+    if (!capturedImage.isNull() && !imageLooksMostlyBlack(capturedImage)) {
         backendUsed = QStringLiteral("PrintWindow");
     } else {
-        pixmap = captureFromDC(false);
-        if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+        capturedImage = captureFromDC(false);
+        if (!capturedImage.isNull() && !imageLooksMostlyBlack(capturedImage)) {
             backendUsed = QStringLiteral("BitBlt");
         }
     }
 
-    if (pixmap.isNull() || pixmapLooksMostlyBlack(pixmap)) {
+    if (capturedImage.isNull() || imageLooksMostlyBlack(capturedImage)) {
         emit captureError(windowCaptureUnavailableMessage());
         return;
     }
 
-    // 原始分辨率输出，不强制缩放
-    QImage frame = pixmap.toImage().convertToFormat(QImage::Format_RGB32);
+    QImage frame = capturedImage.convertToFormat(QImage::Format_RGB32);
     if (frame.isNull()) {
         emit captureError(QStringLiteral("GDI frame conversion failed"));
         return;
+    }
+    if (m_outputSize.isValid()
+        && (frame.width() > m_outputSize.width() || frame.height() > m_outputSize.height())) {
+        frame = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::FastTransformation);
     }
 
     ++m_frameIndex;
@@ -567,7 +569,6 @@ void ScreenCapturer::captureWithGdiWindow()
 
 void ScreenCapturer::captureWithGrabWindow()
 {
-    QPixmap pixmap;
     QString backendUsed = QStringLiteral("GrabWindow");
 
     if (m_captureMode == CaptureMode::PrimaryScreen) {
@@ -576,7 +577,24 @@ void ScreenCapturer::captureWithGrabWindow()
             emit captureError("No primary screen found");
             return;
         }
-        pixmap = screen->grabWindow(0);
+        QPixmap pixmap = screen->grabWindow(0);
+        if (pixmap.isNull()) {
+            emit captureError("grabWindow() returned null pixmap");
+            return;
+        }
+
+        QImage frame = prepareOutputFrame(pixmap.toImage(), m_outputSize);
+
+        ++m_frameIndex;
+        emitFrameWithStats(frame, backendUsed, pixmap.size());
+
+        CaptureFrameMetadata meta;
+        meta.sourceSize = pixmap.size();
+        meta.sourceGeometry = screen->geometry();
+        meta.backendName = QStringLiteral("GrabWindow");
+        meta.frameIndex = m_frameIndex;
+        emit frameMetadataChanged(meta);
+        return;
     } else if (m_captureMode == CaptureMode::IndexedScreen) {
         const QList<QScreen*> screens = QGuiApplication::screens();
         if (m_screenIndex < 0 || m_screenIndex >= screens.size()) {
@@ -588,7 +606,24 @@ void ScreenCapturer::captureWithGrabWindow()
             emit captureError(QStringLiteral("Screen not available"));
             return;
         }
-        pixmap = screen->grabWindow(0);
+        QPixmap pixmap = screen->grabWindow(0);
+        if (pixmap.isNull()) {
+            emit captureError("grabWindow() returned null pixmap");
+            return;
+        }
+
+        QImage frame = prepareOutputFrame(pixmap.toImage(), m_outputSize);
+
+        ++m_frameIndex;
+        emitFrameWithStats(frame, backendUsed, pixmap.size());
+
+        CaptureFrameMetadata meta;
+        meta.sourceSize = pixmap.size();
+        meta.sourceGeometry = screen->geometry();
+        meta.backendName = QStringLiteral("GrabWindow");
+        meta.frameIndex = m_frameIndex;
+        emit frameMetadataChanged(meta);
+        return;
     } else {
 #ifdef Q_OS_WIN
         HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
@@ -613,7 +648,7 @@ void ScreenCapturer::captureWithGrabWindow()
             return;
         }
 
-        auto captureFromDC = [&](bool usePrintWindow) -> QPixmap {
+        auto captureFromDC = [&](bool usePrintWindow) -> QImage {
             HDC screenDc = GetDC(nullptr);
             if (!screenDc) {
                 return {};
@@ -642,7 +677,7 @@ void ScreenCapturer::captureWithGrabWindow()
                 }
             }
 
-            QPixmap result;
+            QImage result;
             if (ok) {
                 BITMAPINFO bmi{};
                 bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -661,7 +696,7 @@ void ScreenCapturer::captureWithGrabWindow()
                                   image.bits(),
                                   &bmi,
                                   DIB_RGB_COLORS) > 0) {
-                        result = QPixmap::fromImage(image);
+                        result = image;
                     }
                 }
             }
@@ -673,76 +708,75 @@ void ScreenCapturer::captureWithGrabWindow()
             return result;
         };
 
-        pixmap = captureFromDC(true);
-        if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+        QImage windowImage = captureFromDC(true);
+        if (!windowImage.isNull() && !imageLooksMostlyBlack(windowImage)) {
             backendUsed = QStringLiteral("PrintWindow");
         } else {
-            pixmap = captureFromDC(false);
-            if (!pixmap.isNull() && !pixmapLooksMostlyBlack(pixmap)) {
+            windowImage = captureFromDC(false);
+            if (!windowImage.isNull() && !imageLooksMostlyBlack(windowImage)) {
                 backendUsed = QStringLiteral("BitBlt");
             }
         }
-        if (pixmap.isNull() || pixmapLooksMostlyBlack(pixmap)) {
+        if (windowImage.isNull() || imageLooksMostlyBlack(windowImage)) {
             emit captureError(windowCaptureUnavailableMessage());
             return;
         }
+
+        QImage frame = prepareOutputFrame(windowImage, m_outputSize);
+
+        ++m_frameIndex;
+        emitFrameWithStats(frame, backendUsed, windowImage.size());
+
+        CaptureFrameMetadata meta;
+        meta.sourceSize = windowImage.size();
+        RECT metaRect{};
+        if (GetWindowRect(hwnd, &metaRect)) {
+            meta.sourceGeometry = QRect(metaRect.left,
+                                        metaRect.top,
+                                        metaRect.right - metaRect.left,
+                                        metaRect.bottom - metaRect.top);
+        }
+        meta.windowHandle = m_windowHandle;
+        meta.backendName = backendUsed;
+        meta.frameIndex = m_frameIndex;
+        emit frameMetadataChanged(meta);
+        return;
 #else
         QScreen* screen = QGuiApplication::primaryScreen();
         if (!screen) {
             emit captureError("No primary screen found");
             return;
         }
-        pixmap = screen->grabWindow(static_cast<WId>(m_windowHandle));
-#endif
-    }
+        QImage windowImage = screen->grabWindow(static_cast<WId>(m_windowHandle)).toImage();
+        if (windowImage.isNull()) {
+            emit captureError("grabWindow() returned null image");
+            return;
+        }
 
-    if (pixmap.isNull()) {
-        emit captureError("grabWindow() returned null pixmap");
+        QImage frame = prepareOutputFrame(windowImage, m_outputSize);
+
+        ++m_frameIndex;
+        emitFrameWithStats(frame, backendUsed, windowImage.size());
+
+        CaptureFrameMetadata meta;
+        meta.sourceSize = windowImage.size();
+        meta.backendName = QStringLiteral("GrabWindow");
+        meta.frameIndex = m_frameIndex;
+        emit frameMetadataChanged(meta);
         return;
-    }
-
-    QImage frame = prepareOutputFrame(pixmap.toImage(), m_outputSize);
-
-    ++m_frameIndex;
-    emitFrameWithStats(frame, backendUsed, pixmap.size());
-
-    CaptureFrameMetadata meta;
-    meta.sourceSize = pixmap.size();
-    if (m_captureMode == CaptureMode::PrimaryScreen) {
-        if (QScreen* primary = QGuiApplication::primaryScreen()) {
-            meta.sourceGeometry = primary->geometry();
-        }
-        meta.backendName = QStringLiteral("GrabWindow");
-    } else if (m_captureMode == CaptureMode::IndexedScreen) {
-        const QList<QScreen*> screens = QGuiApplication::screens();
-        if (m_screenIndex >= 0 && m_screenIndex < screens.size() && screens.at(m_screenIndex)) {
-            meta.sourceGeometry = screens.at(m_screenIndex)->geometry();
-        }
-        meta.backendName = QStringLiteral("GrabWindow");
-    } else {
-#ifdef Q_OS_WIN
-        RECT rect{};
-        const HWND hwnd = reinterpret_cast<HWND>(m_windowHandle);
-        if (hwnd && GetWindowRect(hwnd, &rect)) {
-            meta.sourceGeometry = QRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-        }
-        meta.windowHandle = m_windowHandle;
-        meta.backendName = backendUsed;
-#else
-        meta.backendName = QStringLiteral("GrabWindow");
 #endif
     }
-    meta.frameIndex = m_frameIndex;
-    emit frameMetadataChanged(meta);
 }
 
-bool ScreenCapturer::pixmapLooksMostlyBlack(const QPixmap& pixmap) const
+bool ScreenCapturer::imageLooksMostlyBlack(const QImage& imageIn) const
 {
-    if (pixmap.isNull()) {
+    if (imageIn.isNull()) {
         return true;
     }
 
-    const QImage image = pixmap.toImage().convertToFormat(QImage::Format_RGB32);
+    const QImage image = (imageIn.format() == QImage::Format_RGB32)
+                             ? imageIn
+                             : imageIn.convertToFormat(QImage::Format_RGB32);
     if (image.isNull() || image.width() <= 0 || image.height() <= 0) {
         return true;
     }
