@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QResizeEvent>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QtGlobal>
 
@@ -102,8 +103,9 @@ LocalPreviewWindow::LocalPreviewWindow(QWidget* parent)
 
     m_previewLabel = new QLabel(QStringLiteral("等待共享画面..."), this);
     m_previewLabel->setAlignment(Qt::AlignCenter);
-    m_previewLabel->setScaledContents(true);
+    m_previewLabel->setScaledContents(false);
     m_previewLabel->setMinimumSize(0, 0);
+    m_previewLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     m_previewLabel->setStyleSheet(QStringLiteral("background:#0b0d12;border-radius:6px;"));
 
     m_statusLabel = new QLabel(this);
@@ -203,7 +205,7 @@ void LocalPreviewWindow::showError(const QString& error)
 void LocalPreviewWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    // With setScaledContents(true), QLabel re-scales automatically on resize.
+    refreshPreviewPixmap();
 }
 
 void LocalPreviewWindow::updateMicLevel(double dbfs)
@@ -246,10 +248,23 @@ void LocalPreviewWindow::refreshPreviewPixmap()
         return;
     }
 
-    // Let Qt/GPU handle scaling via QLabel::setScaledContents(true).
-    // Avoid CPU-side scaled() to keep the main thread free.
-    const QPixmap pixmap = QPixmap::fromImage(m_lastFrame);
-    m_displaySize = pixmap.size();
+    const qreal dpr = m_previewLabel->devicePixelRatioF();
+    const QSize labelPx(qMax(1, int(m_previewLabel->width()  * dpr)),
+                        qMax(1, int(m_previewLabel->height() * dpr)));
+
+    QImage scaled;
+    if (m_lastFrame.width() <= labelPx.width()
+        && m_lastFrame.height() <= labelPx.height()) {
+        scaled = m_lastFrame;
+    } else {
+        scaled = m_lastFrame.scaled(labelPx,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation);
+    }
+
+    QPixmap pixmap = QPixmap::fromImage(scaled);
+    pixmap.setDevicePixelRatio(dpr);
+    m_displaySize = pixmap.size() / dpr;
     m_previewLabel->setPixmap(pixmap);
     refreshStatusText();
 }

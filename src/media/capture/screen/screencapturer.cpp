@@ -227,7 +227,7 @@ void ScreenCapturer::captureFrame()
                         QImage output = frame;
                         if (m_outputSize.isValid()
                             && (frame.width() > m_outputSize.width() || frame.height() > m_outputSize.height())) {
-                            output = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+                            output = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                         }
                         emitFrameWithStats(output,
                                            QStringLiteral("WGC"),
@@ -553,7 +553,7 @@ void ScreenCapturer::captureWithGdiWindow()
     }
     if (m_outputSize.isValid()
         && (frame.width() > m_outputSize.width() || frame.height() > m_outputSize.height())) {
-        frame = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+        frame = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
     ++m_frameIndex;
