@@ -179,5 +179,4 @@ stopSharing()
 | [AUDIO.md](AUDIO.md) | 查看音频采集、混音与 audio thread 细节 |
 | [NETWORK.md](NETWORK.md) | 查看 `Sender` 队列、封包格式与 sender thread 调度 |
 | [UI.md](UI.md) | 查看主控窗口、预览刷新和界面交互 |
-| [BUILD.md](BUILD.md) | 查看构建选项、测试开关与环境依赖 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看自动化测试入口与手动验收步骤 |
+| [BUILD.md](BUILD.md) | 查看构建选项与环境依赖 |

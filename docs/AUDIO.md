@@ -13,8 +13,6 @@
 | `AudioMixer` | `src/media/mixer/audiomixer.{h,cpp}` | 双路 PCM 混音、重采样、ducking |
 | `AudioPlayer` | `src/media/playback/audioplayer.{h,cpp}` | PCM 数据播放（Qt Multimedia） |
 
-`tests/test_audio_mixer.cpp` 覆盖混音、ducking 与缓冲区复位等关键逻辑。
-
 ---
 
 ## 音频格式约定
@@ -191,4 +189,3 @@ connect(m_audioMixer, &AudioMixer::mixedAudioReady,
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 查看整体线程模型与析构顺序 |
 | [NETWORK.md](NETWORK.md) | 查看音频包如何进入 sender thread 并封包发送 |
 | [UI.md](UI.md) | 查看本地回放开关、音量电平显示与主控流程 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看音频功能、ducking 与回放的验收步骤 |

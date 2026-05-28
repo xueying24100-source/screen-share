@@ -11,8 +11,6 @@
 | `AnnotationOverlay` | `src/ui/annotation/annotationoverlay.{h,cpp}` | 透明绘图层，处理鼠标输入、笔迹渲染、文字批注、撤销 / 重做 |
 | `AnnotationWindow` | `src/ui/annotation/annotationwindow.{h,cpp}` | 承载 `AnnotationOverlay` 的顶层透明窗口，负责窗口生命周期 |
 
-`tests/test_annotation_overlay.cpp` 覆盖撤销 / 重做、渲染结果和批注相关核心行为。
-
 ---
 
 ## 数据结构
@@ -165,4 +163,3 @@ connect(m_annotationWindow, &AnnotationWindow::contentChanged,
 |------|------|
 | [UI.md](UI.md) | 查看批注窗口的创建、显示与几何跟随 |
 | [NETWORK.md](NETWORK.md) | 查看笔划与文字如何进入 sender thread 并序列化 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看批注相关手动验收步骤 |
