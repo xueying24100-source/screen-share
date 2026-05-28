@@ -10,8 +10,6 @@
 2. 按优先级队列调度，将数据打包为固定格式数据包；
 3. 通过可替换的 `INetworkTransport` 接口发送给接收端。
 
-`tests/test_sender_queue.cpp` 覆盖优先级调度、视频旧包丢弃与 `stop()` 清队列行为。
-
 ---
 
 ## 整体架构
@@ -249,4 +247,3 @@ QMetaObject::invokeMethod(m_sender, [sender = m_sender]() {
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 查看 sender thread 在整体线程模型中的位置 |
 | [AUDIO.md](AUDIO.md) | 查看音频包如何从 audio thread 进入 `Sender` |
 | [ANNOTATION.md](ANNOTATION.md) | 查看批注事件与序列化来源 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看自动化测试与发送链路验收方式 |

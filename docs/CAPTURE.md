@@ -18,8 +18,6 @@
 | `SourceEnumerator` | `src/media/capture/screen/sourceenumerator.{h,cpp}` | 枚举屏幕与可见窗口，供 UI 层使用 |
 | `WgcTestWindow` | `src/platform/windows/debug/wgctestwindow.{h,cpp}` | `WGC` 独立测试 / 调试窗口（默认不编译，需 `-DSCREENSHARE_BUILD_DEBUG_WINDOWS=ON`） |
 
-`tests/test_screen_capturer_helpers.cpp` 覆盖黑帧判定逻辑，`tests/test_capture_smoke_windows.cpp` 覆盖 Windows 下真实采集链路的交互式冒烟验证。
-
 ---
 
 ## ScreenCapturer 公开接口
@@ -254,5 +252,4 @@ connect(m_capturer, &ScreenCapturer::captureError,
 |------|------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 查看整体线程模型、sender thread 与析构顺序 |
 | [UI.md](UI.md) | 查看主线程预览刷新、窗口跟随与界面交互 |
-| [BUILD.md](BUILD.md) | 查看 `SCREENSHARE_BUILD_DEBUG_WINDOWS`、测试开关与环境依赖 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看窗口共享、屏幕共享和退出稳定性的验收步骤 |
+| [BUILD.md](BUILD.md) | 查看 `SCREENSHARE_BUILD_DEBUG_WINDOWS` 与环境依赖 |

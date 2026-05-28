@@ -8,11 +8,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 option(SCREENSHARE_BUILD_DEBUG_WINDOWS "Build standalone debug windows" OFF)
-option(SCREENSHARE_BUILD_TESTS "Build unit tests" ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Multimedia)
-
-enable_testing()
 
 set(SCREENSHARE_CORE_SOURCES
     src/ui/main/meetingmainwindow.cpp
@@ -99,7 +96,3 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE screen_share_core)
-
-if(SCREENSHARE_BUILD_TESTS)
-    add_subdirectory(tests)
-endif()

@@ -195,4 +195,3 @@ Windows 下在 `main()` 中初始化 WinRT 公寓，供 `WGC` 后端使用；正
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 查看整体线程模型、sender thread 与析构顺序 |
 | [CAPTURE.md](CAPTURE.md) | 查看采集链路、背压策略与窗口共享降级逻辑 |
 | [ANNOTATION.md](ANNOTATION.md) | 查看批注窗口、批注图层与预览合成 |
-| [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | 查看屏幕共享、窗口共享和批注的验收步骤 |

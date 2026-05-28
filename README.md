@@ -1,6 +1,6 @@
 # Screen Share
 
-**平台**：Windows 10/11（完整功能） | **Qt**：Qt6（Core / Gui / Widgets / Multimedia / Test） | **构建状态**：✅ 按本文档可手动构建与执行测试 | **License**：❌ 暂未指定
+**平台**：Windows 10/11（完整功能） | **Qt**：Qt6（Core / Gui / Widgets / Multimedia） | **构建状态**：✅ 按本文档可手动构建 | **License**：❌ 暂未指定
 
 基于 **Qt6 + C++20** 的桌面屏幕共享应用，支持屏幕共享、窗口共享、实时音频传输、协同批注叠加以及本地预览监控。
 
@@ -31,8 +31,6 @@
 | **编译器** | C++20（MSVC 2022 推荐；GCC 12+ / Clang 14+ 亦可） |
 | **Windows SDK** | 10.0.19041.0+，含 C++/WinRT 头文件（`WGC` 后端必需） |
 
-**测试依赖**：Qt6 `Test` 模块（用于 `tests/` 下的 QtTest 单测，可通过 `-DSCREENSHARE_BUILD_TESTS=OFF` 关闭）。
-
 ---
 
 ## 快速构建
@@ -48,31 +46,6 @@ cmake --build build --parallel
 
 如需编译调试窗口（`src/ui/main/mainwindow.*`、`src/platform/windows/debug/wgctestwindow.*`），请额外启用 `-DSCREENSHARE_BUILD_DEBUG_WINDOWS=ON`。
 
-## 运行测试
-
-Windows + MSVC 多配置生成器下，推荐直接使用下面的命令：
-
-```text
-ctest --test-dir build -C Debug --output-on-failure
-```
-
-如果 `ctest` 不在 `PATH` 中，它通常位于 `C:\Qt\Tools\CMake_64\bin\`；可以使用绝对路径，或先在当前终端执行：
-
-```text
-set PATH=C:\Qt\Tools\CMake_64\bin;%PATH%
-ctest --test-dir build -C Debug --output-on-failure
-```
-
-`tests/` 下共有 5 个 QtTest 可执行文件，其中 `test_capture_smoke_windows` 是交互式冒烟测试，带 `Manual` label，默认不会随常规 `ctest` 自动运行；需要单独触发：
-
-```text
-ctest --test-dir build -C Debug -L Manual -V
-```
-
-如需逐个执行，也可以直接运行 `build\tests\Debug\test_*.exe`。
-
-详细构建步骤、依赖说明及常见问题，请参见 [docs/BUILD.md](docs/BUILD.md)；手动验证步骤请参见 [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md)。
-
 ---
 
 ## 文档索引
@@ -86,7 +59,6 @@ ctest --test-dir build -C Debug -L Manual -V
 | [docs/UI.md](docs/UI.md) | 主控窗口、共享源选择、悬浮工具条、本地预览窗口 |
 | [docs/ANNOTATION.md](docs/ANNOTATION.md) | 批注层数据结构、渲染、撤销 / 重做、远端同步 |
 | [docs/BUILD.md](docs/BUILD.md) | 环境依赖、编译步骤、Qt Creator 集成、常见问题 |
-| [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md) | 自动化测试入口与屏幕共享 / 窗口共享 / 批注 / 音频的手动验证清单 |
 
 ---
 
@@ -103,7 +75,6 @@ screen-share/
 │   ├── BUILD.md
 │   ├── CAPTURE.md
 │   ├── NETWORK.md
-│   ├── TEST_CHECKLIST.md
 │   └── UI.md
 ├── src/
 │   ├── app/
@@ -142,20 +113,7 @@ screen-share/
 │   │       └── debug/
 │   │           └── wgctestwindow.{h,cpp}          # WGC 调试窗口（默认不编译，需 -DSCREENSHARE_BUILD_DEBUG_WINDOWS=ON）
 │   └── common/                            # 预留通用工具（当前为空）
-└── tests/
-    ├── CMakeLists.txt
-    ├── test_annotation_overlay.cpp
-    ├── test_audio_mixer.cpp
-    ├── test_capture_smoke_windows.cpp
-    ├── test_screen_capturer_helpers.cpp
-    └── test_sender_queue.cpp
 ```
-
----
-
-## 测试与质量保障
-
-自动化测试覆盖 `AudioMixer`、`AnnotationOverlay`、`Sender` 队列调度、`ScreenCapturer` 辅助逻辑，以及 Windows 下真实采集链路的交互式冒烟验证。除自动化测试外，建议结合 [docs/TEST_CHECKLIST.md](docs/TEST_CHECKLIST.md) 完成屏幕共享、窗口共享、批注、音频和退出稳定性的手动验收。
 
 ---
 
