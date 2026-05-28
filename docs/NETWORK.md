@@ -2,7 +2,7 @@
 
 ## 模块概述
 
-`Sender`（`sender.{h,cpp}`）是整个屏幕共享系统的**媒体调度核心**，负责：
+`Sender`（`src/network/sender.{h,cpp}`）是整个屏幕共享系统的**媒体调度核心**，负责：
 
 1. 接收来自 `ScreenCapturer`、`AudioMixer`、`AnnotationOverlay` 的多路媒体数据；
 2. 按优先级队列调度，将数据打包为固定格式数据包；
@@ -67,7 +67,7 @@ flowchart LR
 
 ### PacketHeader（固定 24 字节）
 
-定义于 `sender.h`：
+定义于 `src/network/sender.h`：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -168,7 +168,7 @@ virtual QByteArray encode(const QByteArray& pcm) = 0;
 
 ## 批注序列化
 
-`AnnotationSerializer`（定义于 `sender.h`）提供两个静态方法：
+`AnnotationSerializer`（定义于 `src/network/sender.h`）提供两个静态方法：
 
 ```cpp
 static QByteArray serializeStroke(const StrokePacket& pkt);

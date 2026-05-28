@@ -6,17 +6,17 @@ UI 层由以下类组成：
 
 | 类 | 文件 | 职责 |
 |----|------|------|
-| `MeetingMainWindow` | `meetingmainwindow.{h,cpp}` | 会议主窗口，协调所有模块生命周期 |
-| `ShareSourcePicker` | `sharesourcepicker.{h,cpp}` | 共享源选择对话框（屏幕/窗口/选项）|
-| `ShareToolbar` | `sharetoolbar.{h,cpp}` | 悬浮共享控制工具条 |
-| `LocalPreviewWindow` | `localpreviewwindow.{h,cpp}` | 本地预览窗口（帧预览 + 音频电平）|
-| `MainWindow` | `mainwindow.{h,cpp}` | 应用入口窗口（当前仅作调试用）|
+| `MeetingMainWindow` | `src/ui/main/meetingmainwindow.{h,cpp}` | 会议主窗口，协调所有模块生命周期 |
+| `ShareSourcePicker` | `src/ui/picker/sharesourcepicker.{h,cpp}` | 共享源选择对话框（屏幕/窗口/选项）|
+| `ShareToolbar` | `src/ui/toolbar/sharetoolbar.{h,cpp}` | 悬浮共享控制工具条 |
+| `LocalPreviewWindow` | `src/ui/preview/localpreviewwindow.{h,cpp}` | 本地预览窗口（帧预览 + 音频电平）|
+| `MainWindow` | `src/ui/main/mainwindow.{h,cpp}` | 应用入口窗口（当前仅作调试用）|
 
 ---
 
 ## MeetingMainWindow
 
-`MeetingMainWindow`（继承 `QMainWindow`）是整个应用的核心协调者，定义于 `meetingmainwindow.h`。
+`MeetingMainWindow`（继承 `QMainWindow`）是整个应用的核心协调者，定义于 `src/ui/main/meetingmainwindow.h`。
 
 ### 持有的模块实例
 
@@ -69,7 +69,7 @@ UI 层由以下类组成：
 
 ### ShareSelection 结构
 
-定义于 `sharesourcepicker.h`，描述用户的共享配置：
+定义于 `src/ui/picker/sharesourcepicker.h`，描述用户的共享配置：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -130,7 +130,7 @@ ShareSelection selection() const;   // 获取用户最终选择
 
 ## LocalPreviewWindow
 
-`LocalPreviewWindow`（继承 `QWidget`）展示本地采集预览和音频电平，定义于 `localpreviewwindow.h`。
+`LocalPreviewWindow`（继承 `QWidget`）展示本地采集预览和音频电平，定义于 `src/ui/preview/localpreviewwindow.h`。
 
 ### 视频预览
 
@@ -165,7 +165,7 @@ ShareSelection selection() const;   // 获取用户最终选择
 
 ## MainWindow
 
-`MainWindow`（`mainwindow.{h,cpp}`）目前仅作为开发调试入口：
+`MainWindow`（`src/ui/main/mainwindow.{h,cpp}`）目前仅作为开发调试入口：
 
 ```cpp
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
@@ -175,11 +175,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 }
 ```
 
-正式运行时程序入口（`main.cpp`）直接实例化 `MeetingMainWindow`，`MainWindow` 仅保留供单独调试批注窗口。
+正式运行时程序入口（`src/app/main.cpp`）直接实例化 `MeetingMainWindow`，`MainWindow` 仅保留供单独调试批注窗口。
 
 ---
 
-## 程序入口（main.cpp）
+## 程序入口（src/app/main.cpp）
 
 ```cpp
 int main(int argc, char* argv[])
