@@ -10,9 +10,11 @@
 ShareToolbar::ShareToolbar(QWidget* parent)
     : QWidget(parent)
 {
-    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint
+                   | Qt::WindowStaysOnTopHint | Qt::WindowDoesNotAcceptFocus);
     setObjectName(QStringLiteral("shareToolbarRoot"));
     setAttribute(Qt::WA_StyledBackground, true);
+    setAttribute(Qt::WA_ShowWithoutActivating);
     setMouseTracking(true);
     setStyleSheet(QStringLiteral(
         "QWidget#shareToolbarRoot { background: #202430; border-radius: 10px; }"

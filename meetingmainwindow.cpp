@@ -243,6 +243,14 @@ MeetingMainWindow::MeetingMainWindow(QWidget* parent)
         }
         m_localPlayback->stop();
     });
+    connect(m_localPlayback, &AudioPlayer::playerError, this,
+            [this](const QString& msg) {
+                qWarning() << "[AudioPlayer] error:" << msg;
+                if (m_toolbar) {
+                    m_toolbar->setLocalPlaybackEnabled(false);
+                }
+                QMessageBox::warning(this, QStringLiteral("本地回放失败"), msg);
+            });
 
     connect(m_windowFollowTimer, &QTimer::timeout, this, &MeetingMainWindow::applyAnnotationGeometry);
     m_previewRefreshTimer->setSingleShot(true);
@@ -410,10 +418,13 @@ void MeetingMainWindow::startSharing(const ShareSelection& selection)
         if (selection.kind == ShareSelection::Kind::Window) {
             quintptr hwnd = selection.hwnd;
             int fps = selection.fps;
+            QMetaObject::invokeMethod(cap, [cap]() {
+                cap->setOutputSize(QSize(1280, 720));
+            }, Qt::QueuedConnection);
             QMetaObject::invokeMethod(cap, [cap, hwnd, fps]() {
                 cap->startWindow(hwnd, fps);
             }, Qt::QueuedConnection);
-            m_windowFollowTimer->start(30);
+            m_windowFollowTimer->start(100);
         } else {
             // Screen mode: cap at 720p to keep main thread free
             const QList<QScreen*> screens = QGuiApplication::screens();
@@ -634,15 +645,23 @@ void MeetingMainWindow::onFrameCaptured(const QImage& frame)
 {
     Q_ASSERT(QThread::currentThread() == this->thread());
 
+    if (frame.isNull() || frame.width() <= 0 || frame.height() <= 0) {
+        return;
+    }
+
     m_lastCaptureError.clear();
     QImage processedFrame = frame;
-    // Cap at 1280×720 to reduce main-thread CPU load (one step, no intermediate 1920×1080)
-    if (processedFrame.width() > 1920 || processedFrame.height() > 1080) {
-        processedFrame = processedFrame.scaled(1280, 720, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    if (processedFrame.width() > 1280 || processedFrame.height() > 720) {
+        processedFrame = processedFrame.scaled(1280, 720,
+                                               Qt::KeepAspectRatio,
+                                               Qt::FastTransformation);
     }
     m_lastRawFrame = processedFrame;
 
     const QImage composedFrame = composeFrameWithAnnotations(processedFrame);
+    if (composedFrame.isNull()) {
+        return;
+    }
     m_sender->onMainScreenFrameCaptured(composedFrame);
     if (m_preview) {
         m_preview->updateFrame(composedFrame);
@@ -740,7 +759,12 @@ void MeetingMainWindow::applyAnnotationGeometry()
     if (!GetWindowRect(hwnd, &rect)) {
         return;
     }
-    const QRect geometry(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+    const int w = rect.right - rect.left;
+    const int h = rect.bottom - rect.top;
+    if (w <= 0 || h <= 0) {
+        return;
+    }
+    const QRect geometry(rect.left, rect.top, w, h);
     m_annotationWindow->setTargetGeometry(geometry);
     if (!m_annotationWindow->isVisible()) {
         m_annotationWindow->show();

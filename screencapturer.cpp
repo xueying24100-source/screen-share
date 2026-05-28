@@ -223,7 +223,12 @@ void ScreenCapturer::captureFrame()
 
                     if (!m_wgcFailed) {
                         ++m_frameIndex;
-                        emitFrameWithStats(frame,
+                        QImage output = frame;
+                        if (m_outputSize.isValid()
+                            && (frame.width() > m_outputSize.width() || frame.height() > m_outputSize.height())) {
+                            output = frame.scaled(m_outputSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+                        }
+                        emitFrameWithStats(output,
                                            QStringLiteral("WGC"),
                                            m_wgcBackend->lastFrameSize());
 
