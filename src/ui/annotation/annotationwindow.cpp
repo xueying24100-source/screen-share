@@ -1,4 +1,4 @@
-#include "annotationwindow.h"
+#include "ui/annotation/annotationwindow.h"
 
 #include <QComboBox>
 #include <QCloseEvent>

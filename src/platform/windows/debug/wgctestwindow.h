@@ -2,7 +2,7 @@
 
 #include <QWidget>
 #include <QQueue>
-#include "screencapturer.h"
+#include "media/capture/screen/screencapturer.h"
 
 class QComboBox;
 class QLabel;

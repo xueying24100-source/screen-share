@@ -1,5 +1,5 @@
-#include "mainwindow.h"
-#include "annotationwindow.h"
+#include "ui/main/mainwindow.h"
+#include "ui/annotation/annotationwindow.h"
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget* parent)

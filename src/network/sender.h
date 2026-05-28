@@ -7,7 +7,7 @@
 #include <QScopedPointer>
 #include <QTimer>
 
-#include "annotationoverlay.h"
+#include "ui/annotation/annotationoverlay.h"
 
 // Sender v3 skeleton: extensible media hub for Feishu-meeting style evolution.
 // Future upgrades: H.264/Opus codecs, real network transports, multi-stream PiP policies.

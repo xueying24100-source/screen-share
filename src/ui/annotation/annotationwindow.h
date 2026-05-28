@@ -1,6 +1,6 @@
 #pragma once
 #include <QWidget>
-#include "annotationoverlay.h"
+#include "ui/annotation/annotationoverlay.h"
 
 class QCloseEvent;
 class QKeyEvent;

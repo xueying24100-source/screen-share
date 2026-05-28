@@ -1,5 +1,5 @@
 #include <QApplication>
-#include "meetingmainwindow.h"
+#include "ui/main/meetingmainwindow.h"
 
 #ifdef _WIN32
 #include <winrt/base.h>

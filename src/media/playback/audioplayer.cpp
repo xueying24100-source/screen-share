@@ -1,4 +1,4 @@
-#include "audioplayer.h"
+#include "media/playback/audioplayer.h"
 
 #include <QDateTime>
 #include <QDebug>

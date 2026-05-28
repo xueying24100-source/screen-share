@@ -1,5 +1,5 @@
-#include "screencapturer.h"
-#include "wgcwindowcapturebackend.h"
+#include "media/capture/screen/screencapturer.h"
+#include "platform/windows/wgc/wgcwindowcapturebackend.h"
 
 #include <QGuiApplication>
 #include <QScreen>

@@ -1,6 +1,6 @@
-#include "wgctestwindow.h"
+#include "platform/windows/debug/wgctestwindow.h"
 
-#include "sourceenumerator.h"
+#include "media/capture/screen/sourceenumerator.h"
 
 #include <QComboBox>
 #include <QDateTime>

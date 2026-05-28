@@ -13,7 +13,7 @@
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
 #endif
 
-#include "wgcwindowcapturebackend.h"
+#include "platform/windows/wgc/wgcwindowcapturebackend.h"
 #ifdef Q_OS_WIN
 
 #include <Windows.h>
