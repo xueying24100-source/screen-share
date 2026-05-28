@@ -7,6 +7,7 @@
 #include <QRect>
 #include <QSize>
 #include <QTimer>
+#include <atomic>
 #include <memory>
 
 #ifdef Q_OS_WIN
@@ -44,6 +45,8 @@ public:
 
     void setOutputSize(const QSize& size) { m_outputSize = size; }
     QSize outputSize() const { return m_outputSize; }
+    static bool imageLooksMostlyBlack(const QImage& imageIn);
+    void releaseFrameSlot();
 
     enum class CaptureState { Idle, Starting, Running, Recovering, Error, Stopped };
 
@@ -62,7 +65,6 @@ private:
     void captureWithGrabWindow();
     void captureWithGdiWindow();
     void emitFrameWithStats(const QImage& frame, const QString& backendName, const QSize& sourceSize);
-    bool imageLooksMostlyBlack(const QImage& image) const;
 
     QTimer* m_timer;
     QSize   m_outputSize{1280, 720};
@@ -87,6 +89,7 @@ private:
     qint64       m_statsWindowStartMs{0};
     int          m_statsWindowFrames{0};
     bool         m_wgcFallbackLoggedForSession{false};
+    std::atomic<int> m_inFlightFrames{0};
 
 #ifdef Q_OS_WIN
     Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;

@@ -72,6 +72,7 @@ void ScreenCapturer::start(int fps)
     m_lastEmittedFrame = QImage{};
     m_statsWindowStartMs = QDateTime::currentMSecsSinceEpoch();
     m_statsWindowFrames = 0;
+    m_inFlightFrames.store(0, std::memory_order_release);
     int interval = (fps > 0) ? (1000 / fps) : 33;
     m_timer->start(interval);
     m_running = true;
@@ -133,6 +134,7 @@ void ScreenCapturer::stop()
     m_statsWindowStartMs = 0;
     m_statsWindowFrames = 0;
     m_wgcFallbackLoggedForSession = false;
+    m_inFlightFrames.store(0, std::memory_order_release);
     qDebug() << "[ScreenCapturer] stopped";
 }
 
@@ -768,7 +770,7 @@ void ScreenCapturer::captureWithGrabWindow()
     }
 }
 
-bool ScreenCapturer::imageLooksMostlyBlack(const QImage& imageIn) const
+bool ScreenCapturer::imageLooksMostlyBlack(const QImage& imageIn)
 {
     if (imageIn.isNull()) {
         return true;
@@ -807,6 +809,9 @@ bool ScreenCapturer::imageLooksMostlyBlack(const QImage& imageIn) const
 void ScreenCapturer::emitFrameWithStats(const QImage& frame, const QString& backendName, const QSize& sourceSize)
 {
     m_lastEmittedFrame = frame;
+    if (m_inFlightFrames.exchange(1, std::memory_order_acq_rel) != 0) {
+        return;
+    }
     emit frameCaptured(frame);
 
     const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
@@ -826,4 +831,9 @@ void ScreenCapturer::emitFrameWithStats(const QImage& frame, const QString& back
         m_statsWindowStartMs = nowMs;
         m_statsWindowFrames = 0;
     }
+}
+
+void ScreenCapturer::releaseFrameSlot()
+{
+    m_inFlightFrames.store(0, std::memory_order_release);
 }

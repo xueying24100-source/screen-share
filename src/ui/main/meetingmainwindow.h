@@ -55,6 +55,7 @@ private:
 
     QThread* m_audioThread{nullptr};
     QThread* m_captureThread{nullptr};
+    QThread* m_senderThread{nullptr};
 
     QPushButton* m_shareButton{nullptr};
     QPushButton* m_endButton{nullptr};
@@ -72,4 +73,5 @@ private:
     QElapsedTimer m_mixedAudioLogTimer;
     bool m_localPlaybackWarningShown{false};
     bool m_annotationLayerDirty{true};
+    bool m_previewDirty{false};
 };

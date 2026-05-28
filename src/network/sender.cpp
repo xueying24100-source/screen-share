@@ -96,6 +96,7 @@ Sender::Sender(QObject* parent)
     , m_videoEncoder(new JpegVideoEncoder)
     , m_audioEncoder(new PcmAudioEncoder)
 {
+    m_sendTimer.setParent(this);
     m_sendTimer.setInterval(5);
     connect(&m_sendTimer, &QTimer::timeout, this, &Sender::processSendLoop);
 
@@ -135,6 +136,7 @@ void Sender::stop()
     m_highQueue.clear();
     m_normalQueue.clear();
     m_lowQueue.clear();
+    m_transport = nullptr;
 }
 
 StreamId Sender::registerVideoStream(SourceKind sourceKind,
@@ -210,16 +212,25 @@ void Sender::setStreamEnabled(StreamId streamId, bool enabled)
 
 void Sender::onMainScreenFrameCaptured(const QImage& frame)
 {
+    if (!m_running) {
+        return;
+    }
     enqueueVideoFrame(SourceKind::DesktopMain, frame);
 }
 
 void Sender::onPipFrameCaptured(const QImage& frame)
 {
+    if (!m_running) {
+        return;
+    }
     enqueueVideoFrame(SourceKind::CameraPip, frame);
 }
 
 void Sender::onAudioDataReady(const QByteArray& data)
 {
+    if (!m_running) {
+        return;
+    }
     const StreamId streamId = findStreamId(SourceKind::Microphone);
     auto it = m_streams.find(streamId);
     if (it == m_streams.end() || !it->enabled) {
@@ -232,6 +243,9 @@ void Sender::onAudioDataReady(const QByteArray& data)
 
 void Sender::onStrokePacketReady(const StrokePacket& pkt)
 {
+    if (!m_running) {
+        return;
+    }
     const StreamId streamId = findStreamId(SourceKind::AnnotationStroke);
     auto it = m_streams.find(streamId);
     if (it == m_streams.end() || !it->enabled) {
@@ -244,6 +258,9 @@ void Sender::onStrokePacketReady(const StrokePacket& pkt)
 
 void Sender::onTextAnnotationCreated(const TextAnnotation& text)
 {
+    if (!m_running) {
+        return;
+    }
     const StreamId streamId = findStreamId(SourceKind::AnnotationText);
     auto it = m_streams.find(streamId);
     if (it == m_streams.end() || !it->enabled) {
@@ -321,6 +338,9 @@ quint64 Sender::nowUs() const
 
 void Sender::enqueueVideoFrame(SourceKind sourceKind, const QImage& frame)
 {
+    if (!m_running) {
+        return;
+    }
     const StreamId streamId = findStreamId(sourceKind);
     auto it = m_streams.find(streamId);
     if (it == m_streams.end() || !it->enabled || frame.isNull()) {
@@ -342,6 +362,9 @@ void Sender::enqueueVideoFrame(SourceKind sourceKind, const QImage& frame)
 
 void Sender::enqueuePayload(StreamId streamId, const QByteArray& payload, bool reliable)
 {
+    if (!m_running) {
+        return;
+    }
     if (payload.isEmpty()) {
         return;
     }

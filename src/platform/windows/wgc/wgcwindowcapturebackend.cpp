@@ -145,7 +145,7 @@ bool WgcWindowCaptureBackend::start(HWND hwnd)
         m_impl->framePool = winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool::Create(
             m_impl->winrtDevice,
             winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized,
-            2,
+            3,
             size);
 
         // 6. 创建 capture session
@@ -221,6 +221,10 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
         if (!frame) {
             return {};
         }
+        while (auto newerFrame = m_impl->framePool.TryGetNextFrame()) {
+            try { frame.Close(); } catch (...) {}
+            frame = std::move(newerFrame);
+        }
         struct FrameGuard {
             decltype(frame)& frameRef;
             ~FrameGuard() {
@@ -279,7 +283,7 @@ QImage WgcWindowCaptureBackend::tryGetFrame()
             m_impl->framePool.Recreate(
                 m_impl->winrtDevice,
                 winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized,
-                2,
+                3,
                 itemSize);
         }
 
