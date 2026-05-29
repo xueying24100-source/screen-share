@@ -124,3 +124,188 @@ open build/screenShare.app
 - **实时通信**: WebRTC (libwebrtc)
 - **信令通道**: 自定义 TCP 协议 (JSON)
 - **构建系统**: CMake 3.19+
+
+---
+
+## 屏幕共享模块对接指南
+
+本章节描述客户端业务架构（已完成）与屏幕共享模块（窗口枚举与采集、屏幕枚举与采集）的对接流程。
+
+### 模块分工
+
+| 模块 | 负责人 | 平台 | 职责 |
+|------|--------|------|------|
+| 窗口枚举与采集 | 蒋宗原 | Windows | 枚举系统窗口列表，采集指定窗口画面 |
+| 屏幕枚举与采集 | 韦燕丹 | Windows | 枚举显示器列表，采集指定屏幕画面 |
+| 窗口枚举与采集 | 俞哲钊 | macOS | 枚举系统窗口列表，采集指定窗口画面 |
+| 屏幕枚举与采集 | 邢雨茁 | macOS | 枚举显示器列表，采集指定屏幕画面 |
+| 客户端业务架构 | 黄俊杰 / 赵芃年 | macOS / Windows | UI 页面、房间管理、WebRTC 集成 |
+
+### 采集模块预期接口
+
+屏幕采集模块应封装为一个 `ScreenCapturer` 类，提供以下接口供客户端业务架构层调用：
+
+```cpp
+// 预期的采集模块接口（采集模块开发者需实现此接口）
+class ScreenCapturer : public QObject {
+    Q_OBJECT
+public:
+    // 采集源信息
+    struct CaptureSource {
+        int id;           // 源的唯一标识
+        QString title;    // 窗口标题或显示器名称
+        bool isScreen;    // true=屏幕, false=窗口
+    };
+
+    // 获取可用的屏幕/窗口列表
+    QList<CaptureSource> getSourceList();
+
+    // 选择采集源（通过 getSourceList 返回的 id）
+    bool selectSource(int sourceId);
+
+    // 开始采集，fps 为目标帧率（建议 10-15）
+    bool startCapture(int fps = 15);
+
+    // 停止采集
+    void stopCapture();
+
+    // 当前是否正在采集
+    bool isCapturing() const;
+
+signals:
+    // 每帧采集完成时发射，frame 为 QImage 格式
+    void frameCaptured(const QImage &frame);
+};
+```
+
+**接口约定**：
+
+- `frameCaptured` 信号的 `QImage` 像素格式应为 `QImage::Format_ARGB32` 或 `QImage::Format_RGB32`（Qt 标准格式）
+- macOS 采集模块需要注意 `CGDisplayCreateImage` 返回的 BGRA 数据需要转换为 ARGB 格式
+- 采集操作应在独立线程执行，`frameCaptured` 信号通过 `Qt::QueuedConnection` 传递到 UI 线程
+- macOS 需要"屏幕录制权限"，采集模块应在无法采集时返回明确错误信息
+
+### 对接流程
+
+#### 第一步：集成采集模块源文件
+
+采集模块开发者将源文件放入项目中，建议目录结构：
+
+```
+screen-share/
+├── capture/                         # 新建采集模块目录
+│   ├── ScreenCapturer.h             # 采集模块头文件（接口定义）
+│   ├── ScreenCapturer.cpp           # 采集模块实现（平台相关）
+│   ├── WindowEnumerator.h/.cpp      # 窗口枚举（可选，按模块内部设计）
+│   └── ScreenEnumerator.h/.cpp      # 屏幕枚举（可选，按模块内部设计）
+```
+
+#### 第二步：修改 CMakeLists.txt
+
+在 `qt_add_executable` 中添加采集模块源文件，并增加 include 路径：
+
+```cmake
+qt_add_executable(screenShare
+    # ... 现有文件 ...
+    capture/ScreenCapturer.cpp
+    capture/ScreenCapturer.h
+)
+
+target_include_directories(screenShare PRIVATE
+    # ... 现有路径 ...
+    ${CMAKE_CURRENT_SOURCE_DIR}/capture
+)
+```
+
+#### 第三步：在 RoomPage 中集成采集模块
+
+修改 `pages/RoomPage.h`，添加采集模块成员：
+
+```cpp
+#include "ScreenCapturer.h"
+
+class RoomPage : public QWidget {
+    // ...
+private:
+    ScreenCapturer *m_capturer = nullptr;
+};
+```
+
+修改 `pages/RoomPage.cpp`，在构造函数中初始化并连接信号：
+
+```cpp
+m_capturer = new ScreenCapturer(this);
+
+// 采集帧 → ScreenView 渲染
+connect(m_capturer, &ScreenCapturer::frameCaptured,
+        m_screenView, &ScreenView::updateFrame);
+```
+
+#### 第四步：修改共享按钮逻辑
+
+修改 `RoomPage::onShareClicked()`，将模拟逻辑替换为真实采集调用：
+
+```cpp
+void RoomPage::onShareClicked() {
+    if (!m_isSharing) {
+        // 开始采集
+        if (m_capturer->startCapture(15)) {
+            m_isSharing = true;
+            setSharingUI(true);
+        }
+    } else {
+        // 停止采集
+        m_capturer->stopCapture();
+        m_isSharing = false;
+        setSharingUI(false);
+    }
+}
+```
+
+#### 第五步：ScreenView 帧渲染
+
+`widgets/ScreenView.h` 已预留 `updateFrame(const QImage &frame)` 接口，采集模块的 `frameCaptured` 信号可直接连接到此方法。渲染逻辑在 `paintEvent` 中自动处理缩放和居中显示。
+
+### 对接流程图
+
+```
+采集模块开发者                          客户端业务架构
+    │                                      │
+    │  1. 提供 ScreenCapturer 头文件和实现   │
+    │──────────────────────────────────────>│
+    │                                      │  2. 放入 capture/ 目录
+    │                                      │  3. 修改 CMakeLists.txt
+    │                                      │  4. RoomPage 中创建实例
+    │                                      │  5. 连接 frameCaptured → updateFrame
+    │                                      │  6. 连接 共享按钮 → startCapture/stopCapture
+    │                                      │
+    │                                      │  7. 编译联调
+    │  8. 确认帧格式、分辨率、帧率           │
+    │<─────────────────────────────────────>│
+    │                                      │  9. 验证渲染效果
+    │                                      │
+    │  10. WebRTC 推流集成（后续阶段）       │
+    │<─────────────────────────────────────>│
+```
+
+### 联调检查清单
+
+对接前需双方确认以下事项：
+
+- [ ] 确认采集模块头文件路径和类名
+- [ ] 确认 `frameCaptured` 信号参数格式（`QImage` 还是原始数据 + 宽高）
+- [ ] 确认像素格式（BGRA / ARGB / RGB），用于颜色转换
+- [ ] 确认 macOS 屏幕录制权限的检查和引导方式
+- [ ] 确认采集模块是否线程安全（采集线程 vs UI 线程）
+- [ ] 在 `CMakeLists.txt` 中添加采集模块源文件和 include 路径
+- [ ] 编译联调，验证帧能正确渲染到 ScreenView
+- [ ] 确认采集帧率和分辨率参数（建议 10-15 fps，1280x720 或 1920x1080）
+
+### macOS 特殊说明
+
+macOS 平台对接时需注意：
+
+1. **屏幕录制权限**：macOS 10.15+ 需要在"系统偏好设置 → 安全性与隐私 → 屏幕录制"中授权应用。采集模块应在 `startCapture()` 失败时提供明确的权限缺失提示
+2. **像素格式**：macOS 的 `CGDisplayCreateImage` 返回 BGRA 格式，需转换为 Qt 支持的 ARGB 格式（或使用 `QImage::Format_RGB32`）
+3. **Retina 显示器**：macOS Retina 屏幕的实际像素尺寸是逻辑尺寸的 2 倍，采集时需注意 `backingScaleFactor` 的处理
+4. **编译器**：macOS 使用 Clang（Xcode Command Line Tools），确保 C++17 特性可用
