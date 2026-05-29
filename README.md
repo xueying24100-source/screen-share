@@ -48,3 +48,9 @@ git push origin jzy
 
 > 每人只在自己的分支开发，不要直接提交到 `main`。
 
+
+---
+
+## 联调说明
+
+统一接口与联调任务请见：[`docs/integration-plan.md`](docs/integration-plan.md)
