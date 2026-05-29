@@ -88,7 +88,7 @@ screen-share/
 - ✅ 把原代码搬过来即可（保留 git 历史可用 `git mv`），不需要重命名、不需要重构。
 - ✅ 顶层只有一个 `CMakeLists.txt`，**不要每人一个 `.pro` / `CMakeLists.txt`**。CMake 已经做了 `WIN32` / `APPLE` 条件分支，自动把对应平台目录的文件加进编译。
 
-### 各目录都附了一份 README，照着抄即可：
+### 各目录都附了一份 README，照着抄即可
 
 - [`src/platform/windows/README.md`](../src/platform/windows/README.md) — 给 wyd + jzy
 - [`src/platform/macos/README.md`](../src/platform/macos/README.md) — 给 xyz + yzz
@@ -165,8 +165,54 @@ screen-share/
 
 把分享端 `ICapturer::frameReady` 出来的帧，通过 `IMediaChannel` 送到观看端，观看端把帧灌到 `ScreenView`。
 
-### 各成员任务（待第一阶段完成后细化，方向先列出）
+### 帧格式建议
+
+```
+[4B 长度] [1B 类型: 0=video, 1=audio] [payload]
+
+video payload = [8B ptsMs][JPEG 二进制]
+audio payload = [8B ptsMs][PCM 二进制]
+```
+
+### 各成员任务（方向先列出，第一阶段完成后再细化）
 
 | 成员 | 任务 |
 |---|---|
-| hjj | 实现 `TcpMediaChannel : ss::IMediaChannel`，复用现有 `RoomServer/RoomClient`，新增视频/音频二进制帧通道（建议帧格式：`[4B 长度][1B type][payload]
+| hjj | 实现 `TcpMediaChannel : ss::IMediaChannel`，复用现有 `RoomServer / RoomClient`，新增视频/音频二进制帧通道 |
+| wyd | 分享端：把 `VideoFrame` 经 JPEG 压缩后调 `IMediaChannel::sendVideo()` |
+| zpn | 观看端 Win：订阅 `IMediaChannel::videoArrived`，解 JPEG 后调 `ScreenView::updateFrame` |
+| hjj | 观看端 mac：同上 |
+| xyz / yzz | 协助调试 mac 端编码/解码、性能 |
+| jzy | 协助调试 Win 端，处理多源切换 |
+
+### 第二阶段完成标志
+
+局域网内：1 个分享端 + 至少 2 个观看端（含 Win + mac）能看到分享端的实时画面，延迟 < 500ms。
+
+---
+
+## 六、Git 协作流程
+
+```bash
+# 每次开工前
+git fetch origin
+git checkout 你的分支
+git merge origin/dev          # 拉最新接口和目录骨架
+
+# 开发完
+git add . && git commit -m "feat: xxx 适配 ss::ICapturer"
+git push origin 你的分支
+
+# 在 GitHub 上提 PR 时，base 选 dev（不是 main）
+```
+
+- 所有适配 PR → `dev`
+- `dev` 联调稳定后由 wyd 统一 PR 到 `main` 打 tag
+
+---
+
+## 七、有问题怎么办
+
+- 接口疑问 / 改接口提案：在对应 Issue 评论里 @wyd
+- 编译挂了：把报错贴群里，注明分支 + 平台
+- 需要别人配合改东西：直接 @ 对方，不要默默等
