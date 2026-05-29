@@ -36,7 +36,68 @@
 
 ---
 
-## 三、第一阶段：接口适配（核心原则——只包一层，不重写）
+## 三、目录约定（必读！）
+
+`dev` 分支的目录结构已经定好，**每个人只能往自己负责的目录里加文件**，不要在别处新建文件，也不要把"个人小项目目录"（如 `mac-window-capture-yzz/`、`client-windows-zpn/`）整个搬进 `dev`。
+
+```
+screen-share/
+├── include/screen_share/      ← 公共接口（已完成，不要动）
+├── src/
+│   ├── platform/
+│   │   ├── windows/           ← 🪟 wyd + jzy 在这里
+│   │   │   ├── WinScreenCapturer.{h,cpp}        ← wyd
+│   │   │   ├── WinSourceEnumerator.{h,cpp}      ← jzy
+│   │   │   ├── WinCaptureFactory.cpp            ← wyd + jzy 协作
+│   │   │   └── internal/                        ← wyd 把原 WGC/GDI/音频塞这里
+│   │   │
+│   │   └── macos/             ← 🍎 xyz + yzz 在这里
+│   │       ├── MacScreenCapturer.{h,mm}         ← xyz
+│   │       ├── MacSourceEnumerator.{h,mm}       ← yzz
+│   │       ├── MacCaptureFactory.mm             ← xyz + yzz 协作
+│   │       └── internal/                        ← 原 ScreenCaptureKit / 枚举实现
+│   │
+│   ├── client/                ← 💻 hjj + zpn 客户端框架（跨平台共用）
+│   │   ├── pages/             ← LoginPage / RoomPage 等
+│   │   ├── widgets/           ← ScreenView / MemberList / ToolButton 等
+│   │   ├── network/           ← RoomServer / RoomClient
+│   │   └── main.cpp           ← 程序入口（两端共用）
+│   │
+│   └── common/                ← 公共工具（日志、JPEG 编解码等，任何人可加）
+│
+├── docs/                      ← 文档
+├── CMakeLists.txt             ← 顶层 CMake，按平台条件链接（已建好，不要新建）
+└── README.md
+```
+
+### 谁能动哪 — 一张表说清
+
+| 谁 | 允许新增/修改的目录 | 严禁碰 |
+|---|---|---|
+| **wyd** | `src/platform/windows/`（含 `internal/wgc`、`internal/gdi`、`internal/audio`） | `macos/`、`client/` |
+| **jzy** | `src/platform/windows/`（`WinSourceEnumerator.*`、合写 `WinCaptureFactory.cpp`） | `macos/`、`client/` |
+| **xyz** | `src/platform/macos/`（`MacScreenCapturer.*` + `internal/`） | `windows/`、`client/` |
+| **yzz** | `src/platform/macos/`（`MacSourceEnumerator.*` + `internal/`） | `windows/`、`client/` |
+| **hjj** | `src/client/`（业务逻辑、信令、UI），`src/common/` | `src/platform/` |
+| **zpn** | `src/client/`（如有 Win 特有 UI 调整也放这里） | `src/platform/` |
+
+### 几条硬性规则
+
+- ✅ `src/client/` 是跨平台共用代码，**禁止写 `#ifdef Q_OS_WIN` / `#ifdef Q_OS_MAC`**。平台差异在 `ss::createCapturer()` 里解决。
+- ✅ 平台目录是"黑盒"：客户端只 include `include/screen_share/CaptureFactory.h`，**绝不直接 include `src/platform/...` 下的文件**。
+- ✅ 把原代码搬过来即可（保留 git 历史可用 `git mv`），不需要重命名、不需要重构。
+- ✅ 顶层只有一个 `CMakeLists.txt`，**不要每人一个 `.pro` / `CMakeLists.txt`**。CMake 已经做了 `WIN32` / `APPLE` 条件分支，自动把对应平台目录的文件加进编译。
+
+### 各目录都附了一份 README，照着抄即可：
+
+- [`src/platform/windows/README.md`](../src/platform/windows/README.md) — 给 wyd + jzy
+- [`src/platform/macos/README.md`](../src/platform/macos/README.md) — 给 xyz + yzz
+- [`src/client/README.md`](../src/client/README.md) — 给 hjj + zpn
+- [`src/common/README.md`](../src/common/README.md) — 公共工具
+
+---
+
+## 四、第一阶段：接口适配（核心原则——只包一层，不重写）
 
 ### 总验收标准
 
@@ -98,7 +159,7 @@
 
 ---
 
-## 四、第二阶段：网络联调（局域网跨机）
+## 五、第二阶段：网络联调（局域网跨机）
 
 ### 任务
 
@@ -108,41 +169,4 @@
 
 | 成员 | 任务 |
 |---|---|
-| hjj | 实现 `TcpMediaChannel : ss::IMediaChannel`，复用现有 `RoomServer/RoomClient`，新增视频/音频二进制帧通道（建议帧格式：`[4B 长度][1B type][payload]`，视频 payload = `[8B ptsMs][JPEG]`） |
-| wyd | 分享端：在自采自显基础上把 `VideoFrame` 经 JPEG 压缩后调 `IMediaChannel::sendVideo()` |
-| zpn | 观看端 Win：订阅 `IMediaChannel::videoArrived`，解 JPEG 后调 `ScreenView::updateFrame` |
-| hjj | 观看端 mac：同上 |
-| xyz / yzz | 协助调试 mac 端编码/解码、性能 |
-| jzy | 协助调试 Win 端，处理多源切换 |
-
-### 第二阶段完成标志
-
-局域网内：1 个分享端 + 至少 2 个观看端（含 Win + mac）能看到分享端的实时画面，延迟 < 500ms。
-
----
-
-## 五、Git 协作流程
-
-```bash
-# 每次开工前
-git fetch origin
-git checkout 你的分支
-git merge origin/dev          # 拉最新接口
-
-# 开发完
-git add . && git commit -m "feat: xxx 适配 ss::ICapturer"
-git push origin 你的分支
-
-# 提 PR 时，base 选 dev（不是 main）
-```
-
-- 所有适配 PR → `dev`
-- `dev` 联调稳定后由 wyd 统一 PR 到 `main` 打 tag
-
----
-
-## 六、有问题怎么办
-
-- 接口疑问 / 改接口提案：在对应 Issue 评论里 @wyd
-- 编译挂了：把报错贴群里，注明分支 + 平台
-- 需要别人配合改东西：直接 @ 对方，不要默默等
+| hjj | 实现 `TcpMediaChannel : ss::IMediaChannel`，复用现有 `RoomServer/RoomClient`，新增视频/音频二进制帧通道（建议帧格式：`[4B 长度][1B type][payload]
