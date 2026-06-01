@@ -43,6 +43,7 @@ private:
     void handleShareStop(QTcpSocket *socket);
     void handleGrabShare(QTcpSocket *socket);
     void handleGrabRespond(QTcpSocket *socket, const QJsonObject &msg);
+    void handleVideoFrame(QTcpSocket *socket, const QJsonObject &msg);
 
     QTcpSocket* findSharerInRoom(const QString &roomId) const;
 

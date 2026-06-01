@@ -2,6 +2,8 @@
 #include "widgets/ScreenView.h"
 #include "widgets/MemberList.h"
 #include "network/RoomClient.h"
+#include "screencapturer.h"
+#include "sharesourcepicker.h"
 
 #include <QLabel>
 #include <QPushButton>
@@ -9,6 +11,9 @@
 #include <QHBoxLayout>
 #include <QSplitter>
 #include <QMessageBox>
+#include <QBuffer>
+#include <QComboBox>
+#include <QDateTime>
 
 RoomPage::RoomPage(QWidget *parent)
     : QWidget(parent)
@@ -18,8 +23,18 @@ RoomPage::RoomPage(QWidget *parent)
     , m_grabBtn(nullptr)
     , m_micBtn(nullptr)
     , m_leaveBtn(nullptr)
+    , m_capturer(new ScreenCapturer(this))
 {
     setupUI();
+
+    connect(m_capturer, &ScreenCapturer::frameCaptured,
+            this, &RoomPage::onLocalFrameCaptured);
+    connect(m_capturer, &ScreenCapturer::captureError, this, [this](const QString &msg) {
+        QMessageBox::warning(this, "采集错误", msg);
+    });
+
+    connect(m_screenView, &ScreenView::annotationCreated,
+            this, &RoomPage::annotationReady);
 }
 
 void RoomPage::setRoomInfo(const RoomPageInfo &info)
@@ -36,6 +51,11 @@ void RoomPage::setRoomInfo(const RoomPageInfo &info)
 
 void RoomPage::resetRoom()
 {
+    if (m_capturer->isRunning()) {
+        m_capturer->stop();
+    }
+    delete m_pendingSelection;
+    m_pendingSelection = nullptr;
     m_isSharing = false;
     m_micOn = false;
     m_currentSharer.clear();
@@ -53,7 +73,7 @@ void RoomPage::resetRoom()
         QPushButton:pressed { background-color: #244a82; }
     )");
     m_micBtn->setChecked(false);
-    m_screenView->stopSimulatedView();
+    m_screenView->clearFrame();
     m_memberList->clearMembers();
     m_memberCountLabel->setText("在线: 0 人");
     m_roomLabel->setText("房间: --");
@@ -75,6 +95,12 @@ void RoomPage::onMemberListReceived(const QString &roomId, const QList<MemberEnt
     m_memberList->setMyName(m_info.nickname);
     m_memberList->setMembers(memberInfos);
     updateMemberCount();
+
+    // 房间内已有人在共享且不是自己，启用抢共享按钮并显示提示
+    if (!m_currentSharer.isEmpty() && m_currentSharer != m_info.nickname) {
+        m_grabBtn->setEnabled(true);
+        m_screenView->setPlaceholderText(QString("正在观看 %1 的屏幕...").arg(m_currentSharer));
+    }
 }
 
 void RoomPage::onMemberJoined(const QString &roomId, const QString &name, bool isSharing)
@@ -103,12 +129,22 @@ void RoomPage::onShareStarted(const QString &roomId, const QString &name)
 
     if (name == m_info.nickname) {
         // 自己是共享者
+        // 如果是抢共享场景，用之前存储的选择启动采集器
+        if (m_pendingSelection) {
+            if (m_pendingSelection->kind == ShareSelection::Kind::Window) {
+                m_capturer->startWindow(m_pendingSelection->hwnd, m_pendingSelection->fps);
+            } else {
+                m_capturer->startScreen(m_pendingSelection->screenIndex, m_pendingSelection->fps);
+            }
+            delete m_pendingSelection;
+            m_pendingSelection = nullptr;
+        }
         m_isSharing = true;
         setSharingUI(true);
         m_grabBtn->setDisabled(true);
     } else {
-        // 自己是观看者，显示模拟画面
-        m_screenView->startSimulatedView(name);
+        // 自己是观看者，等待远程帧渲染
+        m_screenView->setPlaceholderText(QString("正在观看 %1 的屏幕...").arg(name));
         m_grabBtn->setEnabled(true);
     }
 }
@@ -121,12 +157,16 @@ void RoomPage::onShareStopped(const QString &roomId, const QString &name)
 
     if (name == m_info.nickname) {
         // 自己停止共享
+        if (m_capturer->isRunning()) {
+            m_capturer->stop();
+        }
         m_isSharing = false;
         setSharingUI(false);
+        m_screenView->clearFrame();
         m_grabBtn->setDisabled(false);
     } else {
-        // 观看者：停止模拟画面
-        m_screenView->stopSimulatedView();
+        // 观看者：清除画面
+        m_screenView->clearFrame();
     }
 }
 
@@ -149,6 +189,8 @@ void RoomPage::onGrabResult(bool granted, const QString &fromName)
     if (granted) {
         // 后续会收到 share_started 广播自动切换状态
     } else {
+        delete m_pendingSelection;
+        m_pendingSelection = nullptr;
         QMessageBox::information(this, "抢共享",
             QString("%1 拒绝了您的抢共享请求").arg(fromName));
     }
@@ -295,10 +337,75 @@ void RoomPage::setupUI()
     )");
     connect(m_leaveBtn, &QPushButton::clicked, this, &RoomPage::leaveRoomRequested);
 
+    // 标注工具
+    m_annotationToolCombo = new QComboBox(toolbar);
+    m_annotationToolCombo->setFixedWidth(70);
+    m_annotationToolCombo->addItem("画笔", static_cast<int>(AnnotationTool::Pen));
+    m_annotationToolCombo->addItem("矩形", static_cast<int>(AnnotationTool::Rectangle));
+
+    m_annotationColorCombo = new QComboBox(toolbar);
+    m_annotationColorCombo->setFixedWidth(55);
+    m_annotationColorCombo->addItem("红色", "#ff3b30");
+    m_annotationColorCombo->addItem("黄色", "#ffd60a");
+    m_annotationColorCombo->addItem("绿色", "#30d158");
+
+    m_annotationWidthCombo = new QComboBox(toolbar);
+    m_annotationWidthCombo->setFixedWidth(45);
+    m_annotationWidthCombo->addItem("细", 2);
+    m_annotationWidthCombo->addItem("中", 4);
+    m_annotationWidthCombo->addItem("粗", 6);
+    m_annotationWidthCombo->setCurrentIndex(1);
+
+    m_clearAnnotationBtn = new QPushButton("清空标注", toolbar);
+    m_clearAnnotationBtn->setFixedSize(70, 42);
+    m_clearAnnotationBtn->setCursor(Qt::PointingHandCursor);
+    m_clearAnnotationBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #3a3a3a;
+            color: #cccccc;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        QPushButton:hover { background-color: #4a4a4a; }
+    )");
+    m_clearAnnotationBtn->setVisible(false);
+    m_annotationToolCombo->setVisible(false);
+    m_annotationColorCombo->setVisible(false);
+    m_annotationWidthCombo->setVisible(false);
+
+    auto applyAnnotationOptions = [this]() {
+        m_screenView->setAnnotationTool(
+            static_cast<AnnotationTool>(m_annotationToolCombo->currentData().toInt()));
+        m_screenView->setAnnotationColor(QColor(m_annotationColorCombo->currentData().toString()));
+        m_screenView->setAnnotationWidth(m_annotationWidthCombo->currentData().toInt());
+    };
+
+    connect(m_annotationToolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), applyAnnotationOptions);
+    connect(m_annotationColorCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), applyAnnotationOptions);
+    connect(m_annotationWidthCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), applyAnnotationOptions);
+    connect(m_clearAnnotationBtn, &QPushButton::clicked, this, [this]() {
+        m_screenView->clearAnnotations();
+        AnnotationCommand clearCmd;
+        clearCmd.commandId = QString("annotation-clear-%1").arg(++m_commandSeq);
+        clearCmd.objectId = clearCmd.commandId;
+        clearCmd.userId = "local";
+        clearCmd.tool = AnnotationTool::Clear;
+        clearCmd.action = AnnotationAction::ClearAll;
+        clearCmd.timestampMs = QDateTime::currentMSecsSinceEpoch();
+        emit annotationReady(clearCmd);
+    });
+    applyAnnotationOptions();
+
     toolbarLayout->addWidget(m_shareBtn);
     toolbarLayout->addWidget(m_grabBtn);
     toolbarLayout->addWidget(m_micBtn);
     toolbarLayout->addWidget(m_leaveBtn);
+    toolbarLayout->addSpacing(16);
+    toolbarLayout->addWidget(m_annotationToolCombo);
+    toolbarLayout->addWidget(m_annotationColorCombo);
+    toolbarLayout->addWidget(m_annotationWidthCombo);
+    toolbarLayout->addWidget(m_clearAnnotationBtn);
 
     mainLayout->addWidget(toolbar);
 }
@@ -306,14 +413,34 @@ void RoomPage::setupUI()
 void RoomPage::onShareClicked()
 {
     if (!m_isSharing) {
+        ShareSourcePicker picker(this);
+        if (picker.exec() != QDialog::Accepted) {
+            return;
+        }
+
+        const ShareSelection selection = picker.selection();
+        if (selection.kind == ShareSelection::Kind::Window) {
+            m_capturer->startWindow(selection.hwnd, selection.fps);
+        } else {
+            m_capturer->startScreen(selection.screenIndex, selection.fps);
+        }
         emit shareScreenRequested();
     } else {
+        m_capturer->stop();
         emit stopShareRequested();
     }
 }
 
 void RoomPage::onGrabClicked()
 {
+    ShareSourcePicker picker(this);
+    if (picker.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    delete m_pendingSelection;
+    m_pendingSelection = new ShareSelection(picker.selection());
+
     emit grabShareRequested();
 }
 
@@ -361,5 +488,45 @@ void RoomPage::setSharingUI(bool sharing)
             QPushButton:pressed { background-color: #244a82; }
         )");
         m_screenView->setPlaceholderText("等待屏幕共享...");
+    }
+
+    bool showAnnotation = sharing || !m_currentSharer.isEmpty();
+    m_annotationToolCombo->setVisible(showAnnotation);
+    m_annotationColorCombo->setVisible(showAnnotation);
+    m_annotationWidthCombo->setVisible(showAnnotation);
+    m_clearAnnotationBtn->setVisible(showAnnotation);
+    m_screenView->setAnnotationEnabled(showAnnotation);
+}
+
+void RoomPage::onLocalFrameCaptured(const QImage &frame)
+{
+    // 本地预览
+    m_screenView->updateFrame(frame);
+
+    // 编码为 JPEG 发送到网络
+    QByteArray ba;
+    QBuffer buffer(&ba);
+    buffer.open(QIODevice::WriteOnly);
+    frame.save(&buffer, "JPEG", 50);
+    if (!ba.isEmpty()) {
+        emit videoFrameReady(ba);
+    }
+}
+
+void RoomPage::onRemoteFrameReceived(const QByteArray &jpegData)
+{
+    QImage frame;
+    frame.loadFromData(jpegData, "JPEG");
+    if (!frame.isNull()) {
+        m_screenView->updateFrame(frame);
+    }
+}
+
+void RoomPage::onRemoteAnnotation(const AnnotationCommand &command)
+{
+    if (command.action == AnnotationAction::ClearAll) {
+        m_screenView->clearAnnotations();
+    } else {
+        m_screenView->addAnnotation(command);
     }
 }

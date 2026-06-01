@@ -1,4 +1,5 @@
 #include "RoomClient.h"
+#include "AnnotationTypes.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -102,6 +103,53 @@ void RoomClient::respondGrab(bool granted)
     sendMessage(msg);
 }
 
+void RoomClient::sendVideoFrame(const QByteArray &jpegData)
+{
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) return;
+
+    QJsonObject msg;
+    msg["type"] = "video_frame";
+    msg["data"] = QString::fromLatin1(jpegData.toBase64());
+    sendMessage(msg);
+}
+
+void RoomClient::sendAnnotation(const AnnotationCommand &command)
+{
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) return;
+
+    QJsonObject msg;
+    msg["type"] = "annotation";
+    msg["commandId"] = command.commandId;
+    msg["objectId"] = command.objectId;
+    msg["userId"] = command.userId;
+    msg["tool"] = static_cast<int>(command.tool);
+    msg["action"] = static_cast<int>(command.action);
+    msg["color"] = command.style.color.name();
+    msg["width"] = command.style.width;
+
+    QJsonArray pointsArr;
+    for (const auto &p : command.points) {
+        QJsonObject pt;
+        pt["x"] = p.x;
+        pt["y"] = p.y;
+        pointsArr.append(pt);
+    }
+    msg["points"] = pointsArr;
+
+    QJsonObject rectObj;
+    rectObj["x"] = command.normalizedRect.x();
+    rectObj["y"] = command.normalizedRect.y();
+    rectObj["w"] = command.normalizedRect.width();
+    rectObj["h"] = command.normalizedRect.height();
+    msg["rect"] = rectObj;
+
+    msg["canvasW"] = command.sourceCanvasSize.width();
+    msg["canvasH"] = command.sourceCanvasSize.height();
+    msg["timestamp"] = command.timestampMs;
+
+    sendMessage(msg);
+}
+
 void RoomClient::onReadyRead()
 {
     while (m_socket && m_socket->canReadLine()) {
@@ -167,6 +215,36 @@ void RoomClient::handleMessage(const QJsonObject &msg)
         emit grabRequested(msg["from"].toString());
     } else if (type == "grab_result") {
         emit grabResult(msg["granted"].toBool(), msg["from"].toString());
+    } else if (type == "video_frame") {
+        QByteArray jpegData = QByteArray::fromBase64(msg["data"].toString().toLatin1());
+        if (!jpegData.isEmpty()) {
+            emit videoFrameReceived(jpegData);
+        }
+    } else if (type == "annotation") {
+        AnnotationCommand cmd;
+        cmd.commandId = msg["commandId"].toString();
+        cmd.objectId = msg["objectId"].toString();
+        cmd.userId = msg["userId"].toString();
+        cmd.tool = static_cast<AnnotationTool>(msg["tool"].toInt());
+        cmd.action = static_cast<AnnotationAction>(msg["action"].toInt());
+        cmd.style.color = QColor(msg["color"].toString());
+        cmd.style.width = static_cast<float>(msg["width"].toDouble());
+
+        QJsonArray pointsArr = msg["points"].toArray();
+        for (const QJsonValue &v : pointsArr) {
+            AnnotationPoint p;
+            p.x = static_cast<float>(v.toObject()["x"].toDouble());
+            p.y = static_cast<float>(v.toObject()["y"].toDouble());
+            cmd.points.append(p);
+        }
+
+        QJsonObject rectObj = msg["rect"].toObject();
+        cmd.normalizedRect = QRectF(rectObj["x"].toDouble(), rectObj["y"].toDouble(),
+                                     rectObj["w"].toDouble(), rectObj["h"].toDouble());
+        cmd.sourceCanvasSize = QSizeF(msg["canvasW"].toDouble(), msg["canvasH"].toDouble());
+        cmd.timestampMs = msg["timestamp"].toVariant().toLongLong();
+
+        emit annotationReceived(cmd);
     }
 }
 

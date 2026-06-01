@@ -122,6 +122,10 @@ void RoomServer::handleMessage(QTcpSocket *socket, const QJsonObject &msg)
         handleGrabShare(socket);
     } else if (type == "grab_respond") {
         handleGrabRespond(socket, msg);
+    } else if (type == "video_frame") {
+        handleVideoFrame(socket, msg);
+    } else if (type == "annotation") {
+        handleVideoFrame(socket, msg);
     }
 }
 
@@ -325,6 +329,15 @@ void RoomServer::broadcastToRoom(const QString &roomId, const QJsonObject &msg,
             sendToClient(socket, msg);
         }
     }
+}
+
+void RoomServer::handleVideoFrame(QTcpSocket *socket, const QJsonObject &msg)
+{
+    if (!m_clients.contains(socket)) return;
+    QString roomId = m_clients[socket].roomId;
+    if (roomId.isEmpty()) return;
+
+    broadcastToRoom(roomId, msg, socket);
 }
 
 QJsonArray RoomServer::buildMemberList(const QString &roomId) const

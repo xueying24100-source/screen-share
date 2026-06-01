@@ -3,6 +3,7 @@
 #include "pages/RoomPage.h"
 #include "network/RoomServer.h"
 #include "network/RoomClient.h"
+#include "AnnotationTypes.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -102,6 +103,18 @@ void MainWindow::onJoinRoom(const QString &nickname, const QString &roomId,
             this, [this]() { m_client->requestGrabShare(); });
     connect(m_roomPage, &RoomPage::grabShareResponded,
             this, [this](bool granted) { m_client->respondGrab(granted); });
+
+    // 视频帧传输
+    connect(m_roomPage, &RoomPage::videoFrameReady,
+            this, [this](const QByteArray &jpegData) { m_client->sendVideoFrame(jpegData); });
+    connect(m_client, &RoomClient::videoFrameReceived,
+            m_roomPage, &RoomPage::onRemoteFrameReceived);
+
+    // 标注同步
+    connect(m_roomPage, &RoomPage::annotationReady,
+            this, [this](const AnnotationCommand &cmd) { m_client->sendAnnotation(cmd); });
+    connect(m_client, &RoomClient::annotationReceived,
+            m_roomPage, &RoomPage::onRemoteAnnotation);
 
     // 连接错误
     connect(m_client, &RoomClient::errorOccurred, this,

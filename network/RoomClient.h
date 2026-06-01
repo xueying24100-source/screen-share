@@ -9,6 +9,8 @@ struct MemberEntry {
     bool isSharing = false;
 };
 
+struct AnnotationCommand;
+
 class RoomClient : public QObject
 {
     Q_OBJECT
@@ -28,6 +30,9 @@ public:
     void requestGrabShare();
     void respondGrab(bool granted);
 
+    void sendVideoFrame(const QByteArray &jpegData);
+    void sendAnnotation(const AnnotationCommand &command);
+
 signals:
     void connected();
     void disconnected();
@@ -42,6 +47,9 @@ signals:
     void shareRejected(const QString &reason);
     void grabRequested(const QString &fromName);
     void grabResult(bool granted, const QString &fromName);
+
+    void videoFrameReceived(const QByteArray &jpegData);
+    void annotationReceived(const AnnotationCommand &command);
 
 private:
     void onReadyRead();

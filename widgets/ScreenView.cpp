@@ -2,49 +2,132 @@
 
 #include <QPaintEvent>
 #include <QPainter>
+#include <QMouseEvent>
 #include <QDateTime>
-#include <QLinearGradient>
 
 ScreenView::ScreenView(QWidget *parent)
     : QWidget(parent)
     , m_placeholderText("等待屏幕共享...")
 {
     setMinimumSize(640, 480);
-
-    m_simulateTimer = new QTimer(this);
-    connect(m_simulateTimer, &QTimer::timeout, this, &ScreenView::onSimulateTick);
+    setMouseTracking(true);
 }
 
 void ScreenView::setPlaceholderText(const QString &text)
 {
-    if (m_showingContent) return;
     m_placeholderText = text;
-    update();
-}
-
-void ScreenView::startSimulatedView(const QString &sharerName)
-{
-    m_sharerName = sharerName;
-    m_tickCount = 0;
-    m_showingContent = true;
-    m_simulateTimer->start(500); // 每 500ms 刷新一次模拟画面
-    update();
-}
-
-void ScreenView::stopSimulatedView()
-{
-    m_simulateTimer->stop();
-    m_showingContent = false;
-    m_currentFrame = QImage();
-    m_placeholderText = "等待屏幕共享...";
-    update();
+    if (m_currentFrame.isNull()) {
+        update();
+    }
 }
 
 void ScreenView::updateFrame(const QImage &frame)
 {
     m_currentFrame = frame;
-    m_showingContent = true;
     update();
+}
+
+void ScreenView::clearFrame()
+{
+    m_currentFrame = QImage();
+    m_placeholderText = "等待屏幕共享...";
+    update();
+}
+
+void ScreenView::setAnnotationTool(AnnotationTool tool)
+{
+    m_tool = tool;
+}
+
+void ScreenView::setAnnotationColor(const QColor &color)
+{
+    m_strokeColor = color;
+}
+
+void ScreenView::setAnnotationWidth(int width)
+{
+    m_strokeWidth = width;
+}
+
+void ScreenView::addAnnotation(const AnnotationCommand &command)
+{
+    m_annotations.append(command);
+    update();
+}
+
+void ScreenView::clearAnnotations()
+{
+    m_annotations.clear();
+    update();
+}
+
+void ScreenView::setAnnotationEnabled(bool enabled)
+{
+    m_annotationEnabled = enabled;
+    setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+}
+
+QRectF ScreenView::renderedContentRect() const
+{
+    if (m_currentFrame.isNull()) {
+        return QRectF(rect());
+    }
+    QSizeF scaled = m_currentFrame.size();
+    scaled.scale(size(), Qt::KeepAspectRatio);
+    qreal x = (width() - scaled.width()) / 2.0;
+    qreal y = (height() - scaled.height()) / 2.0;
+    return QRectF(x, y, scaled.width(), scaled.height());
+}
+
+AnnotationPoint ScreenView::normalizedPoint(const QPointF &widgetPoint,
+                                             const QRectF &contentRect) const
+{
+    if (contentRect.width() <= 0.0 || contentRect.height() <= 0.0 ||
+        !contentRect.contains(widgetPoint)) {
+        return AnnotationPoint{-1.0f, -1.0f};
+    }
+    return AnnotationPoint{
+        static_cast<float>((widgetPoint.x() - contentRect.left()) / contentRect.width()),
+        static_cast<float>((widgetPoint.y() - contentRect.top()) / contentRect.height())};
+}
+
+QPointF ScreenView::denormalizedPoint(const AnnotationPoint &point,
+                                       const QRectF &contentRect) const
+{
+    return QPointF(contentRect.left() + point.x * contentRect.width(),
+                   contentRect.top() + point.y * contentRect.height());
+}
+
+void ScreenView::drawAnnotation(QPainter *painter, const QRectF &contentRect,
+                                 const AnnotationCommand &cmd) const
+{
+    if (cmd.tool != AnnotationTool::Pen && cmd.tool != AnnotationTool::Rectangle) {
+        return;
+    }
+
+    QPen pen(cmd.style.color, cmd.style.width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    painter->setPen(pen);
+
+    if (cmd.tool == AnnotationTool::Pen) {
+        if (cmd.points.size() == 1) {
+            painter->drawPoint(denormalizedPoint(cmd.points.constFirst(), contentRect));
+            return;
+        }
+        for (int i = 1; i < cmd.points.size(); ++i) {
+            painter->drawLine(denormalizedPoint(cmd.points.at(i - 1), contentRect),
+                              denormalizedPoint(cmd.points.at(i), contentRect));
+        }
+        return;
+    }
+
+    if (cmd.tool == AnnotationTool::Rectangle) {
+        const QRectF rect(
+            QPointF(contentRect.left() + cmd.normalizedRect.left() * contentRect.width(),
+                    contentRect.top() + cmd.normalizedRect.top() * contentRect.height()),
+            QPointF(contentRect.left() + cmd.normalizedRect.right() * contentRect.width(),
+                    contentRect.top() + cmd.normalizedRect.bottom() * contentRect.height()));
+        painter->drawRect(rect.normalized());
+    }
 }
 
 void ScreenView::paintEvent(QPaintEvent *event)
@@ -54,111 +137,123 @@ void ScreenView::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    if (m_showingContent && !m_currentFrame.isNull()) {
-        // 真实帧渲染：等比缩放居中
+    QRectF contentRect = renderedContentRect();
+
+    if (!m_currentFrame.isNull()) {
         QPixmap scaled = QPixmap::fromImage(m_currentFrame).scaled(
             size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
         int x = (width() - scaled.width()) / 2;
         int y = (height() - scaled.height()) / 2;
         painter.fillRect(rect(), QColor("#0a0a14"));
         painter.drawPixmap(x, y, scaled);
+    } else {
+        painter.fillRect(rect(), QColor("#1a1a2e"));
+        painter.setPen(QColor("#666666"));
+        painter.setFont(QFont("Microsoft YaHei", 14));
+        painter.drawText(rect(), Qt::AlignCenter, m_placeholderText);
         return;
     }
 
-    if (m_showingContent) {
-        // 模拟画面
-        drawSimulatedFrame(painter);
+    // 渲染已提交的标注
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    for (const auto &cmd : m_annotations) {
+        drawAnnotation(&painter, contentRect, cmd);
+    }
+
+    // 渲染正在绘制的标注
+    if (m_drawing) {
+        drawAnnotation(&painter, contentRect, m_currentCommand);
+    }
+}
+
+void ScreenView::mousePressEvent(QMouseEvent *event)
+{
+    if (!m_annotationEnabled || event->button() != Qt::LeftButton || m_currentFrame.isNull()) {
+        QWidget::mousePressEvent(event);
         return;
     }
 
-    // 占位画面
-    painter.fillRect(rect(), QColor("#1a1a2e"));
-    painter.setPen(QColor("#666666"));
-    painter.setFont(QFont("Microsoft YaHei", 14));
-    painter.drawText(rect(), Qt::AlignCenter, m_placeholderText);
+    const QRectF contentRect = renderedContentRect();
+    const AnnotationPoint point = normalizedPoint(event->position(), contentRect);
+    if (!isValidAnnotationPoint(point)) {
+        return;
+    }
+
+    m_drawing = true;
+    m_currentCommand = AnnotationCommand();
+    m_currentCommand.commandId = QString("annotation-%1").arg(++m_commandSeq);
+    m_currentCommand.objectId = m_currentCommand.commandId;
+    m_currentCommand.userId = "local";
+    m_currentCommand.tool = m_tool;
+    m_currentCommand.action = AnnotationAction::Begin;
+    m_currentCommand.style.color = m_strokeColor;
+    m_currentCommand.style.width = static_cast<float>(m_strokeWidth);
+    m_currentCommand.sourceCanvasSize = m_currentFrame.size();
+    m_currentCommand.timestampMs = QDateTime::currentMSecsSinceEpoch();
+
+    if (m_tool == AnnotationTool::Pen) {
+        m_currentCommand.points.append(point);
+    } else if (m_tool == AnnotationTool::Rectangle) {
+        m_currentCommand.points.append(point);
+        const QPointF qp = qPointFFromAnnotationPoint(point);
+        m_currentCommand.normalizedRect = QRectF(qp, qp);
+    }
+    update();
 }
 
-void ScreenView::drawSimulatedFrame(QPainter &painter)
+void ScreenView::mouseMoveEvent(QMouseEvent *event)
 {
-    // 背景 — 模拟桌面
-    QLinearGradient bg(rect().topLeft(), rect().bottomRight());
-    bg.setColorAt(0, "#1e3a5f");
-    bg.setColorAt(1, "#0f1b2d");
-    painter.fillRect(rect(), bg);
+    if (!m_drawing) {
+        QWidget::mouseMoveEvent(event);
+        return;
+    }
 
-    int w = width();
-    int h = height();
+    const QRectF contentRect = renderedContentRect();
+    const AnnotationPoint point = normalizedPoint(event->position(), contentRect);
+    if (!isValidAnnotationPoint(point)) {
+        return;
+    }
 
-    // 模拟任务栏
-    QRect taskbar(0, h - 36, w, 36);
-    painter.fillRect(taskbar, QColor("#1a1a2e"));
-    painter.setPen(QColor("#3a3a4a"));
-    painter.drawLine(taskbar.topLeft(), taskbar.topRight());
+    m_currentCommand.action = AnnotationAction::Update;
 
-    painter.setPen(Qt::white);
-    painter.setFont(QFont("Microsoft YaHei", 9));
-    painter.drawText(taskbar.adjusted(10, 0, -10, 0), Qt::AlignVCenter | Qt::AlignLeft,
-                     QDateTime::currentDateTime().toString("hh:mm"));
-
-    // 模拟窗口
-    int winW = qMin(w - 80, 700);
-    int winH = qMin(h - 120, 440);
-    int winX = (w - winW) / 2;
-    int winY = (h - 36 - winH) / 2;
-    QRect windowRect(winX, winY, winW, winH);
-
-    // 窗口阴影
-    painter.fillRect(windowRect.adjusted(4, 4, 4, 4), QColor(0, 0, 0, 60));
-    // 窗口背景
-    painter.fillRect(windowRect, QColor("#2b2b2b"));
-    // 标题栏
-    QRect titleBar(winX, winY, winW, 32);
-    painter.fillRect(titleBar, QColor("#353535"));
-    // 红绿黄三个圆点
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#ff5f57")); painter.drawEllipse(winX + 12, winY + 10, 12, 12);
-    painter.setBrush(QColor("#febc2e")); painter.drawEllipse(winX + 30, winY + 10, 12, 12);
-    painter.setBrush(QColor("#28c840")); painter.drawEllipse(winX + 48, winY + 10, 12, 12);
-    // 标题文字
-    painter.setPen(QColor("#aaaaaa"));
-    painter.setFont(QFont("Microsoft YaHei", 9));
-    painter.drawText(titleBar.adjusted(70, 0, 0, 0), Qt::AlignVCenter | Qt::AlignHCenter,
-                     "屏幕共享演示");
-
-    // 模拟内容区 — 显示共享者信息
-    QRect contentRect(winX + 1, winY + 33, winW - 2, winH - 33);
-    QLinearGradient contentBg(contentRect.topLeft(), contentRect.bottomRight());
-    contentBg.setColorAt(0, "#2d2d3d");
-    contentBg.setColorAt(1, "#1e1e2e");
-    painter.fillRect(contentRect, contentBg);
-
-    // 共享者名称
-    painter.setPen(Qt::white);
-    painter.setFont(QFont("Microsoft YaHei", 16, QFont::Bold));
-    painter.drawText(contentRect.adjusted(0, -40, 0, 0),
-                     Qt::AlignCenter, m_sharerName + " 的屏幕");
-
-    // 动态帧计数器（模拟实时刷新）
-    painter.setPen(QColor("#888888"));
-    painter.setFont(QFont("Microsoft YaHei", 11));
-    painter.drawText(contentRect.adjusted(0, 10, 0, 0),
-                     Qt::AlignCenter,
-                     QString("模拟帧 #%1  ·  %2")
-                         .arg(m_tickCount)
-                         .arg(QDateTime::currentDateTime().toString("hh:mm:ss")));
-
-    // 顶部状态标签
-    QRect tagRect(w / 2 - 80, 8, 160, 28);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(45, 90, 160, 200));
-    painter.drawRoundedRect(tagRect, 4, 4);
-    painter.setPen(Qt::white);
-    painter.setFont(QFont("Microsoft YaHei", 10));
-    painter.drawText(tagRect, Qt::AlignCenter, "● 正在观看");
+    if (m_currentCommand.tool == AnnotationTool::Pen) {
+        if (m_currentCommand.points.isEmpty() ||
+            m_currentCommand.points.constLast().x != point.x ||
+            m_currentCommand.points.constLast().y != point.y) {
+            m_currentCommand.points.append(point);
+        }
+    } else if (m_currentCommand.tool == AnnotationTool::Rectangle && !m_currentCommand.points.isEmpty()) {
+        const QPointF startPt = qPointFFromAnnotationPoint(m_currentCommand.points.constFirst());
+        m_currentCommand.normalizedRect = QRectF(startPt, qPointFFromAnnotationPoint(point)).normalized();
+    }
+    update();
 }
 
-void ScreenView::onSimulateTick()
+void ScreenView::mouseReleaseEvent(QMouseEvent *event)
 {
-    m_tickCount++;
+    if (!m_drawing || event->button() != Qt::LeftButton) {
+        QWidget::mouseReleaseEvent(event);
+        return;
+    }
+
+    m_currentCommand.action = AnnotationAction::Commit;
+    m_currentCommand.timestampMs = QDateTime::currentMSecsSinceEpoch();
+
+    bool valid = false;
+    if (m_currentCommand.tool == AnnotationTool::Pen && !m_currentCommand.points.isEmpty()) {
+        valid = true;
+    } else if (m_currentCommand.tool == AnnotationTool::Rectangle &&
+               m_currentCommand.normalizedRect.width() > 0.002 &&
+               m_currentCommand.normalizedRect.height() > 0.002) {
+        valid = true;
+    }
+
+    if (valid) {
+        m_annotations.append(m_currentCommand);
+        emit annotationCreated(m_currentCommand);
+    }
+
+    m_drawing = false;
+    m_currentCommand = AnnotationCommand();
     update();
 }

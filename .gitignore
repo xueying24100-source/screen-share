@@ -34,5 +34,5 @@ qrc_*.cpp
 Thumbs.db
 
 # md文件
-.md
+*.md
 !README.md

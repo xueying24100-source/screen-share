@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(screenShare LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network LinguistTools)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
 
 qt_standard_project_setup()
 
@@ -24,6 +24,13 @@ qt_add_executable(screenShare
     network/RoomServer.h
     network/RoomClient.cpp
     network/RoomClient.h
+    capture/screencapturer.cpp
+    capture/screencapturer.h
+    capture/sourceenumerator.cpp
+    capture/sourceenumerator.h
+    capture/sharesourcepicker.cpp
+    capture/sharesourcepicker.h
+    capture/AnnotationTypes.h
 )
 
 qt_add_translations(
@@ -36,6 +43,7 @@ target_include_directories(screenShare PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/pages
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets
     ${CMAKE_CURRENT_SOURCE_DIR}/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/capture
 )
 
 target_link_libraries(screenShare
@@ -44,6 +52,10 @@ target_link_libraries(screenShare
         Qt::Widgets
         Qt::Network
 )
+
+if(APPLE)
+    target_link_libraries(screenShare PRIVATE "-framework ApplicationServices")
+endif()
 
 install(TARGETS screenShare
     BUNDLE  DESTINATION .
