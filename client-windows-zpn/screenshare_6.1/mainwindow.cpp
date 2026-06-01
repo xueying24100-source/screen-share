@@ -1,6 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "annotationwindow.h"
+#include "audiocapturer.h"
+#include "systemaudiocapturer.h"
+#include "audiomixer.h"
+#include "sender.h"
+#include "sharetoolbar.h"
+#include "audioplayer.h"
+#include "cameramanager.h"
+#include "networktransport.h"
+#include "mediareceiver.h"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -19,8 +28,16 @@
 #include <QCheckBox>
 #include <QStyle>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QApplication>
 #include <QWindow>
+#include <QCursor>
+#include <QDebug>
+#include <QStringList>
+#include <QPolygonF>
+#include <QPen>
+#include <QPainterPath>
+#include <QLinearGradient>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -103,7 +120,105 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     shareTimer = new QTimer(this);
-    shareTimer->setInterval(160);   // 约 6fps：降低窗口抓取与合成压力，demo 更流畅
+    shareTimer->setInterval(160);   // 默认约 6fps；勾选“流畅模式”后会切到更高刷新率
+
+    micCapturer = new AudioCapturer(this);
+    systemAudioCapturer = new SystemAudioCapturer(this);
+    audioMixer = new AudioMixer(this);
+    localSender = new Sender(this);
+    localAudioPlayer = new AudioPlayer(this);
+    debugTransport = new DebugTransport();
+    cameraManager = new CameraManager(this);
+    cameraManager->setTargetFps(10);
+    cameraManager->setMaxFrameSize(QSize(640, 360));
+    networkTransport = new TcpPacketTransport(this);
+    mediaReceiver = new MediaReceiver(this);
+    localSender->setTransport(debugTransport);
+
+    connect(micCapturer, &AudioCapturer::audioDataReady,
+            audioMixer, &AudioMixer::pushMicPcm);
+    connect(systemAudioCapturer, &SystemAudioCapturer::systemAudioDataReady,
+            audioMixer, &AudioMixer::pushSystemPcm);
+    connect(audioMixer, &AudioMixer::mixedAudioReady,
+            localSender, &Sender::onAudioDataReady);
+    connect(audioMixer, &AudioMixer::mixedAudioReady,
+            localAudioPlayer, &AudioPlayer::playData);
+
+    connect(micCapturer, &AudioCapturer::captureError, this, [this](const QString &error) {
+        qWarning() << "[Mic]" << error;
+        if (sharing) {
+            ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，麦克风不可用");
+        }
+    });
+    connect(systemAudioCapturer, &SystemAudioCapturer::captureError, this, [this](const QString &error) {
+        qWarning() << "[SystemAudio]" << error;
+        if (sharing) {
+            ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，系统声音不可用");
+        }
+    });
+    connect(localAudioPlayer, &AudioPlayer::playerError, this, [this](const QString &error) {
+        qWarning() << "[AudioPlayer]" << error;
+        if (sharing) {
+            ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，本地回放不可用");
+        }
+    });
+
+    connect(cameraManager, &CameraManager::frameReady,
+            this, &MainWindow::onLocalCameraFrame);
+    connect(cameraManager, &CameraManager::cameraStarted, this, [this](const QString &name) {
+        cameraOn = true;
+        if (btnCamera) {
+            btnCamera->setText(QStringLiteral("关闭摄像头"));
+        }
+        ui->labelStatus->setText(QStringLiteral("状态：摄像头已打开：%1").arg(name));
+        ensureSenderRunningForCamera();
+    });
+    connect(cameraManager, &CameraManager::cameraStopped, this, [this]() {
+        cameraOn = false;
+        if (btnCamera) {
+            btnCamera->setText(QStringLiteral("打开摄像头"));
+        }
+        setSmallLabelPlaceholder(ui->labelSmall1, QStringLiteral("本机摄像头"));
+        if (localSender) {
+            localSender->setStreamEnabled(localSender->pipVideoStreamId(), false);
+            localSender->sendCameraStopped();
+        }
+        if (!sharing && localSender) {
+            localSender->stop();
+            localSender->setTransport(nullptr);
+        }
+        ui->labelStatus->setText(QStringLiteral("状态：摄像头已关闭"));
+    });
+    connect(cameraManager, &CameraManager::cameraError, this, [this](const QString &message) {
+        QMessageBox::warning(this, QStringLiteral("摄像头"), message);
+    });
+
+    connect(networkTransport, &TcpPacketTransport::packetReceived,
+            mediaReceiver, &MediaReceiver::onPacketReceived);
+    connect(networkTransport, &TcpPacketTransport::connectedChanged, this, [this](bool connected, const QString &message) {
+        if (localSender) {
+            localSender->setTransport(connected ? static_cast<INetworkTransport*>(networkTransport)
+                                                : static_cast<INetworkTransport*>(debugTransport));
+            if (connected && (sharing || cameraOn)) {
+                localSender->start();
+            }
+        }
+        ui->labelStatus->setText(QStringLiteral("状态：%1").arg(message));
+    });
+    connect(networkTransport, &TcpPacketTransport::transportError, this, [this](const QString &message) {
+        qWarning() << "[Network]" << message;
+        ui->labelStatus->setText(QStringLiteral("状态：%1").arg(message));
+    });
+    connect(mediaReceiver, &MediaReceiver::mainVideoFrameReceived,
+            this, &MainWindow::onRemoteMainFrame);
+    connect(mediaReceiver, &MediaReceiver::cameraFrameReceived,
+            this, &MainWindow::onRemoteCameraFrame);
+    connect(mediaReceiver, &MediaReceiver::cameraStoppedReceived, this, [this]() {
+        setSmallLabelPlaceholder(ui->labelSmall2, QStringLiteral("远端摄像头"));
+    });
+    connect(mediaReceiver, &MediaReceiver::receiverMessage, this, [this](const QString &message) {
+        qWarning() << "[Receiver]" << message;
+    });
 
     ui->labelStatus->setText("状态：未共享");
     ui->labelMainScreen->setText("等待共享");
@@ -114,7 +229,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->labelSmall3->setAlignment(Qt::AlignCenter);
     ui->labelSmall4->setAlignment(Qt::AlignCenter);
     ui->labelSmall5->setAlignment(Qt::AlignCenter);
+    setSmallLabelPlaceholder(ui->labelSmall1, QStringLiteral("本机摄像头"));
+    setSmallLabelPlaceholder(ui->labelSmall2, QStringLiteral("远端摄像头"));
 
+    setupMeetingControls();
     createSharePopup();
 
     connect(ui->btnShare, &QPushButton::clicked,
@@ -134,12 +252,32 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    stopLocalMediaBackend();
     if (shareTimer) {
         shareTimer->stop();
     }
     if (annotationWindow) {
         annotationWindow->close();
     }
+    if (shareToolbar) {
+        shareToolbar->hide();
+        delete shareToolbar;
+        shareToolbar = nullptr;
+    }
+    if (localAudioPlayer) {
+        localAudioPlayer->stop();
+    }
+    if (cameraManager) {
+        cameraManager->stop();
+    }
+    if (networkTransport) {
+        networkTransport->close();
+    }
+    if (localSender) {
+        localSender->setTransport(nullptr);
+    }
+    delete debugTransport;
+    debugTransport = nullptr;
     delete ui;
 }
 
@@ -171,16 +309,17 @@ void MainWindow::createSharePopup()
         QToolButton *btn = new QToolButton(sharePopup);
         btn->setText(text);
         btn->setIcon(icon);
-        btn->setIconSize(QSize(48, 48));
+        btn->setIconSize(QSize(110, 62));
         btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         btn->setFixedSize(150, 110);
         btn->setAutoRaise(false);
         return btn;
     };
 
-    btnDesktop1 = makeButton("桌面1", style()->standardIcon(QStyle::SP_DesktopIcon));
-    btnDesktop2 = makeButton("桌面2", style()->standardIcon(QStyle::SP_ComputerIcon));
+    btnDesktop1 = makeButton("桌面1", makeScreenThumbnailIcon(0));
+    btnDesktop2 = makeButton("桌面2", makeScreenThumbnailIcon(1));
     btnWhiteboard = makeButton("白板", style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    btnWhiteboard->setIconSize(QSize(54, 54));
 
     shareGrid->addWidget(btnDesktop1, 0, 0);
     shareGrid->addWidget(btnDesktop2, 0, 1);
@@ -200,12 +339,33 @@ void MainWindow::createSharePopup()
     QHBoxLayout *bottomLayout = new QHBoxLayout;
     bottomLayout->setSpacing(24);
 
-    QCheckBox *checkShareAudio = new QCheckBox("共享音频", sharePopup);
-    QCheckBox *checkSmooth = new QCheckBox("流畅模式", sharePopup);
+    checkShareAudio = new QCheckBox("共享音频", sharePopup);
+    checkShowCursor = new QCheckBox("显示鼠标指针", sharePopup);
+    checkShowCursor->setChecked(true);
+    checkSmooth = new QCheckBox("流畅模式", sharePopup);
 
     bottomLayout->addWidget(checkShareAudio);
+    bottomLayout->addWidget(checkShowCursor);
     bottomLayout->addWidget(checkSmooth);
     bottomLayout->addStretch();
+
+    connect(checkSmooth, &QCheckBox::toggled, this, [this]() {
+        updateShareTimerInterval();
+        if (localSender) {
+            const bool smooth = checkSmooth && checkSmooth->isChecked();
+            localSender->setMaxFps(localSender->mainVideoStreamId(), smooth ? 10 : 6);
+            localSender->setVideoQuality(localSender->mainVideoStreamId(), smooth ? 50 : 65);
+            localSender->setVideoMaxSize(localSender->mainVideoStreamId(), smooth ? QSize(960, 540) : QSize(1280, 720));
+        }
+    });
+    connect(checkShareAudio, &QCheckBox::toggled, this, [this](bool on) {
+        if (sharing && systemAudioCapturer) {
+            systemAudioCapturer->setEnabled(on);
+        }
+        if (sharing) {
+            ui->labelStatus->setText("状态：正在共享 " + currentShareSource + optionSummary());
+        }
+    });
 
     mainLayout->addStretch();
     mainLayout->addLayout(bottomLayout);
@@ -279,12 +439,26 @@ void MainWindow::refreshSharePopupOptions()
     }
 
     const QList<QScreen*> screens = QGuiApplication::screens();
+    if (btnDesktop1) {
+        btnDesktop1->setIcon(makeScreenThumbnailIcon(0));
+        btnDesktop1->setIconSize(QSize(110, 62));
+        if (!screens.isEmpty() && screens.at(0)) {
+            const QRect g = screens.at(0)->geometry();
+            btnDesktop1->setToolTip(QStringLiteral("共享桌面1：%1×%2").arg(g.width()).arg(g.height()));
+        }
+    }
     if (btnDesktop2) {
         // 没有扩展屏时，直接隐藏“桌面2”。
-        btnDesktop2->setVisible(screens.size() >= 2);
-        btnDesktop2->setToolTip(screens.size() >= 2
-                                    ? QStringLiteral("共享第二块屏幕 / 扩展屏")
-                                    : QStringLiteral("未检测到扩展屏"));
+        const bool hasSecondScreen = screens.size() >= 2;
+        btnDesktop2->setVisible(hasSecondScreen);
+        btnDesktop2->setIcon(makeScreenThumbnailIcon(1));
+        btnDesktop2->setIconSize(QSize(110, 62));
+        if (hasSecondScreen && screens.at(1)) {
+            const QRect g = screens.at(1)->geometry();
+            btnDesktop2->setToolTip(QStringLiteral("共享桌面2 / 扩展屏：%1×%2").arg(g.width()).arg(g.height()));
+        } else {
+            btnDesktop2->setToolTip(QStringLiteral("未检测到扩展屏"));
+        }
     }
 
     clearWindowButtons();
@@ -376,6 +550,47 @@ QString MainWindow::shortWindowTitle(const QString &title, int maxLen) const
     return t.left(maxLen) + QStringLiteral("...");
 }
 
+QIcon MainWindow::makeScreenThumbnailIcon(int screenIndex) const
+{
+    const QSize iconSize(110, 62);
+    QPixmap canvas(iconSize);
+    canvas.fill(Qt::transparent);
+
+    QPixmap desktopPixmap;
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    if (screenIndex >= 0 && screenIndex < screens.size() && screens.at(screenIndex)) {
+        desktopPixmap = screens.at(screenIndex)->grabWindow(0);
+    }
+
+    QPainter painter(&canvas);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    QPainterPath path;
+    path.addRoundedRect(canvas.rect().adjusted(1, 1, -1, -1), 8, 8);
+    painter.setClipPath(path);
+
+    if (!desktopPixmap.isNull()) {
+        QPixmap scaled = desktopPixmap.scaled(iconSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+        const int x = (scaled.width() - iconSize.width()) / 2;
+        const int y = (scaled.height() - iconSize.height()) / 2;
+        painter.drawPixmap(0, 0, scaled.copy(x, y, iconSize.width(), iconSize.height()));
+    } else {
+        QLinearGradient gradient(0, 0, 0, iconSize.height());
+        gradient.setColorAt(0.0, QColor("#45d6e6"));
+        gradient.setColorAt(1.0, QColor("#0f6fb2"));
+        painter.fillRect(canvas.rect(), gradient);
+        painter.setPen(QPen(QColor("#155e75"), 2));
+        painter.drawLine(18, iconSize.height() - 10, iconSize.width() - 18, iconSize.height() - 10);
+    }
+
+    painter.setClipping(false);
+    painter.setPen(QPen(QColor("#cbd5e1"), 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRoundedRect(canvas.rect().adjusted(0, 0, -1, -1), 8, 8);
+
+    return QIcon(canvas);
+}
+
 void MainWindow::centerSharePopup()
 {
     if (!sharePopup) return;
@@ -389,10 +604,534 @@ void MainWindow::centerSharePopup()
     sharePopup->move(x, y);
 }
 
+void MainWindow::showShareToolbar()
+{
+    if (!shareToolbar) {
+        shareToolbar = new ShareToolbar(nullptr);
+
+        connect(shareToolbar, &ShareToolbar::pauseToggled, this, [this](bool paused) {
+            sharePaused = paused;
+            if (shareTimer) {
+                if (sharePaused) {
+                    shareTimer->stop();
+                } else if (sharing) {
+                    shareTimer->start();
+                    captureScreen();
+                }
+            }
+            ui->labelStatus->setText(sharePaused
+                                         ? QStringLiteral("状态：共享已暂停")
+                                         : QStringLiteral("状态：正在共享 ") + currentShareSource + optionSummary());
+        });
+
+        connect(shareToolbar, &ShareToolbar::annotationToggled, this, [this](bool enabled) {
+            setAnnotationEditingEnabled(enabled);
+        });
+
+        connect(shareToolbar, &ShareToolbar::micMuteToggled, this, [this](bool muted) {
+            micMuted = muted;
+            if (sharing && micCapturer) {
+                if (micMuted) {
+                    micCapturer->stop();
+                } else {
+                    micCapturer->start();
+                }
+            }
+            ui->labelStatus->setText(QStringLiteral("状态：正在共享 ") + currentShareSource
+                                     + (micMuted ? QStringLiteral("，麦克风已静音") : QStringLiteral("，麦克风已开启")));
+        });
+
+        connect(shareToolbar, &ShareToolbar::systemAudioToggled, this, [this](bool enabled) {
+            if (checkShareAudio) {
+                checkShareAudio->setChecked(enabled);
+            }
+            if (sharing && systemAudioCapturer) {
+                systemAudioCapturer->setEnabled(enabled);
+            }
+            ui->labelStatus->setText(QStringLiteral("状态：正在共享 ") + currentShareSource
+                                     + (enabled ? QStringLiteral("，共享声音已开启") : QStringLiteral("，共享声音已关闭")));
+        });
+
+        connect(shareToolbar, &ShareToolbar::localPlaybackToggled, this, [this](bool enabled) {
+            if (!localAudioPlayer) {
+                return;
+            }
+            if (enabled) {
+                localAudioPlayer->start();
+            } else {
+                localAudioPlayer->stop();
+            }
+            if (sharing) {
+                ui->labelStatus->setText(QStringLiteral("状态：正在共享 ") + currentShareSource
+                                         + (enabled ? QStringLiteral("，本地回放已开启") : QStringLiteral("，本地回放已关闭")));
+            }
+        });
+
+        connect(shareToolbar, &ShareToolbar::backRequested, this, [this]() {
+            showNormal();
+            raise();
+            activateWindow();
+            positionShareToolbar();
+        });
+
+        connect(shareToolbar, &ShareToolbar::stopRequested, this, [this]() {
+            endShare();
+        });
+    }
+
+    sharePaused = false;
+    micMuted = false;
+    shareToolbar->setPaused(false);
+    shareToolbar->setAnnotationEnabled(annotationWindow && annotationWindow->isVisible());
+    shareToolbar->setMicMuted(false);
+    shareToolbar->setSystemAudioEnabled(checkShareAudio && checkShareAudio->isChecked());
+    shareToolbar->setLocalPlaybackEnabled(localAudioPlayer && localAudioPlayer->isRunning());
+    shareToolbar->show();
+    shareToolbar->raise();
+    positionShareToolbar();
+}
+
+void MainWindow::hideShareToolbar()
+{
+    if (shareToolbar) {
+        shareToolbar->hide();
+        shareToolbar->setPaused(false);
+        shareToolbar->setAnnotationEnabled(false);
+        shareToolbar->setLocalPlaybackEnabled(false);
+    }
+}
+
+void MainWindow::positionShareToolbar()
+{
+    if (!shareToolbar || !shareToolbar->isVisible()) {
+        return;
+    }
+
+    shareToolbar->adjustSize();
+    QRect base = frameGeometry();
+    QScreen *targetScreen = QGuiApplication::screenAt(base.center());
+    if (!targetScreen) {
+        targetScreen = QGuiApplication::primaryScreen();
+    }
+    const QRect available = targetScreen ? targetScreen->availableGeometry() : QRect();
+
+    int x = base.center().x() - shareToolbar->width() / 2;
+    int y = base.top() + 8;
+
+    if (available.isValid()) {
+        x = qBound(available.left() + 8, x, available.right() - shareToolbar->width() - 8);
+        y = qBound(available.top() + 8, y, available.bottom() - shareToolbar->height() - 8);
+    }
+
+    shareToolbar->move(x, y);
+}
+
+void MainWindow::setAnnotationEditingEnabled(bool enabled)
+{
+    if (!sharing) {
+        return;
+    }
+
+    if (enabled) {
+        showAnnotationWindow();
+    } else if (annotationWindow && annotationWindow->isVisible()) {
+        annotationWindow->hide();
+        ui->btnAnnotate->setText("画笔");
+        ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已关闭");
+        if (currentShareType == ShareSourceType::Whiteboard) {
+            updateWhiteboardPreview();
+        } else {
+            captureScreen();
+        }
+    }
+
+    if (shareToolbar) {
+        shareToolbar->setAnnotationEnabled(annotationWindow && annotationWindow->isVisible());
+    }
+}
+
+
+QString MainWindow::optionSummary() const
+{
+    QStringList parts;
+    if (checkShareAudio && checkShareAudio->isChecked()) {
+        parts << QStringLiteral("共享音频");
+    }
+    if (checkShowCursor && checkShowCursor->isChecked() && currentShareType == ShareSourceType::Screen) {
+        parts << QStringLiteral("显示鼠标");
+    }
+    if (checkSmooth && checkSmooth->isChecked()) {
+        parts << QStringLiteral("流畅模式");
+    }
+    return parts.isEmpty() ? QString() : QStringLiteral("（%1）").arg(parts.join(QStringLiteral(" / ")));
+}
+
+
+
+void MainWindow::setupMeetingControls()
+{
+    // bottomBar 仍然是旧 UI 文件里的绝对定位控件。这里统一创建新增按钮，再交给 layoutMeetingControls() 自适应排布。
+    if (!ui || !ui->bottomBar) {
+        return;
+    }
+
+    btnHost = new QPushButton(QStringLiteral("开启监听"), ui->bottomBar);
+    btnHost->setObjectName(QStringLiteral("btnHostMeeting"));
+    btnHost->show();
+
+    btnConnectLocal = new QPushButton(QStringLiteral("连接本机"), ui->bottomBar);
+    btnConnectLocal->setObjectName(QStringLiteral("btnConnectLocal"));
+    btnConnectLocal->show();
+
+    btnCamera = new QPushButton(QStringLiteral("打开摄像头"), ui->bottomBar);
+    btnCamera->setObjectName(QStringLiteral("btnCamera"));
+    btnCamera->show();
+
+    const QString extraButtonStyle = R"(
+        QPushButton#btnHostMeeting, QPushButton#btnConnectLocal, QPushButton#btnCamera {
+            border: none;
+            border-radius: 12px;
+            background-color: #e5e7eb;
+            color: #111827;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton#btnHostMeeting:hover, QPushButton#btnConnectLocal:hover, QPushButton#btnCamera:hover {
+            background-color: #dbeafe;
+            color: #1677ff;
+        }
+    )";
+    ui->bottomBar->setStyleSheet(ui->bottomBar->styleSheet() + extraButtonStyle);
+
+    layoutMeetingControls();
+
+    connect(btnCamera, &QPushButton::clicked, this, &MainWindow::toggleCamera);
+    connect(btnHost, &QPushButton::clicked, this, &MainWindow::startHostMeeting);
+    connect(btnConnectLocal, &QPushButton::clicked, this, &MainWindow::connectLocalMeeting);
+}
+
+void MainWindow::layoutMeetingControls()
+{
+    if (!ui || !ui->bottomBar || !btnHost || !btnConnectLocal || !btnCamera) {
+        return;
+    }
+
+    const int barW = qMax(ui->bottomBar->width(), 970);
+    const int y = 28;
+    const int h = 40;
+    const int rightMargin = 22;
+    int gap = 20;
+
+    const QList<int> widths = {105, 105, 100, 90, 100, 115};
+    int totalButtonsW = 0;
+    for (int w : widths) {
+        totalButtonsW += w;
+    }
+    int totalW = totalButtonsW + gap * (widths.size() - 1);
+
+    // 默认状态栏保留一块空间；窗口较窄时自动压缩间距，避免按钮重叠。
+    const int preferredStartX = 260;
+    if (preferredStartX + totalW + rightMargin > barW) {
+        gap = qMax(12, (barW - preferredStartX - rightMargin - totalButtonsW) / (widths.size() - 1));
+        totalW = totalButtonsW + gap * (widths.size() - 1);
+    }
+
+    int x = qMax(preferredStartX, barW - totalW - rightMargin);
+    const int statusW = qBound(220, x - 40, 420);
+    ui->labelStatus->setGeometry(20, y, statusW, 32);
+
+    QPushButton *buttons[] = {
+        btnHost,
+        btnConnectLocal,
+        ui->btnShare,
+        ui->btnAnnotate,
+        ui->btnEnd,
+        btnCamera
+    };
+
+    for (int i = 0; i < widths.size(); ++i) {
+        buttons[i]->setGeometry(x, y, widths[i], h);
+        x += widths[i] + gap;
+    }
+}
+
+INetworkTransport *MainWindow::activeTransport() const
+{
+    if (networkTransport && networkTransport->isConnected()) {
+        return networkTransport;
+    }
+    return debugTransport;
+}
+
+void MainWindow::ensureSenderRunningForCamera()
+{
+    if (!localSender) {
+        return;
+    }
+    localSender->setTransport(activeTransport());
+    localSender->setStreamEnabled(localSender->pipVideoStreamId(), true);
+    localSender->setMaxFps(localSender->pipVideoStreamId(), 10);
+    localSender->setVideoQuality(localSender->pipVideoStreamId(), 60);
+    localSender->setVideoMaxSize(localSender->pipVideoStreamId(), QSize(480, 270));
+    if (!localSender->isRunning()) {
+        localSender->start();
+    }
+}
+
+void MainWindow::updateVideoLabel(QLabel *label, const QImage &image, const QString &fallbackText)
+{
+    if (!label) {
+        return;
+    }
+    if (image.isNull()) {
+        setSmallLabelPlaceholder(label, fallbackText);
+        return;
+    }
+
+    QPixmap pixmap = QPixmap::fromImage(image).scaled(
+        label->size(),
+        Qt::KeepAspectRatio,
+        Qt::FastTransformation);
+    label->setText(QString());
+    label->setPixmap(pixmap);
+    label->setAlignment(Qt::AlignCenter);
+}
+
+void MainWindow::setSmallLabelPlaceholder(QLabel *label, const QString &text)
+{
+    if (!label) {
+        return;
+    }
+    label->clear();
+    label->setPixmap(QPixmap());
+    label->setText(text);
+    label->setAlignment(Qt::AlignCenter);
+}
+
+void MainWindow::toggleCamera()
+{
+    if (!cameraManager) {
+        return;
+    }
+
+    if (cameraOn || cameraManager->isRunning()) {
+        cameraManager->stop();
+        return;
+    }
+
+    const QStringList names = cameraManager->availableCameraNames();
+    if (names.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("摄像头"), QStringLiteral("未检测到可用摄像头。"));
+        return;
+    }
+
+    int index = 0;
+    if (names.size() > 1) {
+        bool ok = false;
+        const QString selected = QInputDialog::getItem(this,
+                                                       QStringLiteral("选择摄像头"),
+                                                       QStringLiteral("摄像头设备："),
+                                                       names,
+                                                       0,
+                                                       false,
+                                                       &ok);
+        if (!ok) {
+            return;
+        }
+        index = names.indexOf(selected);
+        if (index < 0) {
+            index = 0;
+        }
+    }
+
+    cameraManager->startCameraByIndex(index);
+}
+
+void MainWindow::startHostMeeting()
+{
+    if (!networkTransport) {
+        return;
+    }
+    constexpr quint16 kDefaultPort = 9000;
+    if (networkTransport->listen(kDefaultPort)) {
+        if (localSender) {
+            localSender->setTransport(activeTransport());
+        }
+    }
+}
+
+void MainWindow::connectLocalMeeting()
+{
+    if (!networkTransport) {
+        return;
+    }
+    constexpr quint16 kDefaultPort = 9000;
+    networkTransport->connectToPeer(QStringLiteral("127.0.0.1"), kDefaultPort);
+}
+
+void MainWindow::onLocalCameraFrame(const QImage &image)
+{
+    updateVideoLabel(ui->labelSmall1, image, QStringLiteral("本机摄像头"));
+    if (localSender && localSender->isRunning()) {
+        localSender->onPipFrameCaptured(image);
+    }
+}
+
+void MainWindow::onRemoteMainFrame(const QImage &image)
+{
+    if (image.isNull()) {
+        return;
+    }
+
+    // 自己正在共享时，大窗口优先显示本地共享；自己没共享时，大窗口显示远端共享画面。
+    if (sharing) {
+        return;
+    }
+
+    QPixmap pixmap = QPixmap::fromImage(image).scaled(
+        ui->labelMainScreen->size(),
+        Qt::KeepAspectRatio,
+        Qt::FastTransformation);
+    ui->labelMainScreen->setStyleSheet("");
+    ui->labelMainScreen->setPixmap(pixmap);
+    ui->labelMainScreen->setAlignment(Qt::AlignCenter);
+}
+
+void MainWindow::onRemoteCameraFrame(const QImage &image)
+{
+    updateVideoLabel(ui->labelSmall2, image, QStringLiteral("远端摄像头"));
+}
+
+void MainWindow::updateShareTimerInterval()
+{
+    if (!shareTimer) {
+        return;
+    }
+    // 流畅模式：约 10fps，并降低发送分辨率；普通模式：约 6fps，CPU 压力更低。
+    const bool smooth = checkSmooth && checkSmooth->isChecked();
+    shareTimer->setInterval(smooth ? 100 : 160);
+}
+
+void MainWindow::startLocalMediaBackend()
+{
+    updateShareTimerInterval();
+
+    if (audioMixer) {
+        audioMixer->reset();
+    }
+    if (localAudioPlayer) {
+        localAudioPlayer->stop();
+    }
+    if (localSender) {
+        localSender->setTransport(activeTransport());
+        const bool smooth = checkSmooth && checkSmooth->isChecked();
+        localSender->setMaxFps(localSender->mainVideoStreamId(), smooth ? 10 : 6);
+        localSender->setVideoQuality(localSender->mainVideoStreamId(), smooth ? 50 : 65);
+        localSender->setVideoMaxSize(localSender->mainVideoStreamId(), smooth ? QSize(960, 540) : QSize(1280, 720));
+        localSender->start();
+    }
+
+    // 会议中默认开启麦克风采集；“共享音频”只控制系统声音 loopback。
+    if (micCapturer) {
+        micCapturer->start();
+    }
+    if (systemAudioCapturer) {
+        systemAudioCapturer->setEnabled(checkShareAudio && checkShareAudio->isChecked());
+    }
+}
+
+void MainWindow::stopLocalMediaBackend()
+{
+    if (systemAudioCapturer) {
+        systemAudioCapturer->setEnabled(false);
+    }
+    if (micCapturer) {
+        micCapturer->stop();
+    }
+    if (audioMixer) {
+        audioMixer->reset();
+    }
+    if (localAudioPlayer) {
+        localAudioPlayer->stop();
+    }
+    if (localSender) {
+        if (!cameraOn) {
+            localSender->stop();
+            localSender->setTransport(nullptr);
+        }
+    }
+}
+
+void MainWindow::sendFrameToLocalSender(const QPixmap &pixmap)
+{
+    if (!localSender || !localSender->isRunning() || pixmap.isNull()) {
+        return;
+    }
+    localSender->onMainScreenFrameCaptured(pixmap.toImage());
+}
+
+void MainWindow::connectAnnotationToSender(AnnotationWindow *window)
+{
+    if (!window || !localSender) {
+        return;
+    }
+    connect(window, &AnnotationWindow::strokePacketReady,
+            localSender, &Sender::onStrokePacketReady, Qt::UniqueConnection);
+    connect(window, &AnnotationWindow::textAnnotationCreated,
+            localSender, &Sender::onTextAnnotationCreated, Qt::UniqueConnection);
+}
+
+QPixmap MainWindow::composeCursorOnPixmap(const QPixmap &basePixmap) const
+{
+    if (basePixmap.isNull() || !checkShowCursor || !checkShowCursor->isChecked()) {
+        return basePixmap;
+    }
+    if (currentShareType != ShareSourceType::Screen) {
+        return basePixmap;
+    }
+
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    if (currentScreenIndex < 0 || currentScreenIndex >= screens.size() || !screens.at(currentScreenIndex)) {
+        return basePixmap;
+    }
+
+    const QRect screenRect = screens.at(currentScreenIndex)->geometry();
+    const QPoint globalCursor = QCursor::pos();
+    if (!screenRect.contains(globalCursor)) {
+        return basePixmap;
+    }
+
+    const QPoint localPos = globalCursor - screenRect.topLeft();
+    const qreal sx = static_cast<qreal>(basePixmap.width()) / qMax(1, screenRect.width());
+    const qreal sy = static_cast<qreal>(basePixmap.height()) / qMax(1, screenRect.height());
+    const QPoint drawPos(qRound(localPos.x() * sx), qRound(localPos.y() * sy));
+
+    QPixmap composed = basePixmap.copy();
+    QPainter painter(&composed);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    // 简单绘制鼠标指针，避免依赖平台 cursor bitmap；第二阶段也方便作为普通视频内容发送。
+    QPolygonF cursorShape;
+    cursorShape << QPointF(0, 0)
+                << QPointF(0, 24)
+                << QPointF(6, 18)
+                << QPointF(10, 30)
+                << QPointF(14, 28)
+                << QPointF(10, 17)
+                << QPointF(20, 17);
+    painter.translate(drawPos);
+    painter.setBrush(Qt::white);
+    painter.setPen(QPen(Qt::black, 1.5));
+    painter.drawPolygon(cursorShape);
+    return composed;
+}
+
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
+    layoutMeetingControls();
     centerSharePopup();
+    positionShareToolbar();
     updateAnnotationWindowGeometry();
     if (currentShareType == ShareSourceType::Whiteboard) {
         updateWhiteboardPreview();
@@ -404,6 +1143,7 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 void MainWindow::moveEvent(QMoveEvent *event)
 {
     QMainWindow::moveEvent(event);
+    positionShareToolbar();
     updateAnnotationWindowGeometry();
     if (sharing && currentShareType != ShareSourceType::Whiteboard) {
         captureScreen();
@@ -457,10 +1197,12 @@ void MainWindow::startShareScreen(int screenIndex)
     currentShareSource = QStringLiteral("桌面%1").arg(screenIndex + 1);
 
     ui->labelMainScreen->setStyleSheet("");
-    ui->labelStatus->setText("状态：正在共享 " + currentShareSource);
+    startLocalMediaBackend();
+    ui->labelStatus->setText("状态：正在共享 " + currentShareSource + optionSummary());
     ui->btnShare->setText("共享中");
     ui->btnAnnotate->setEnabled(true);
     ui->btnAnnotate->setText("画笔");
+    showShareToolbar();
 
     shareTimer->start();
     captureScreen();
@@ -482,10 +1224,12 @@ void MainWindow::startShareWhiteboard()
     currentWindowHandle = 0;
     currentShareSource = QStringLiteral("白板");
 
-    ui->labelStatus->setText("状态：正在共享白板");
+    startLocalMediaBackend();
+    ui->labelStatus->setText("状态：正在共享白板" + optionSummary());
     ui->btnShare->setText("共享中");
     ui->btnAnnotate->setEnabled(true);
     ui->btnAnnotate->setText("画笔");
+    showShareToolbar();
 
     showWhiteboardPreview();
     if (shareTimer) {
@@ -531,10 +1275,12 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
     currentShareSource = QStringLiteral("窗口：") + shortWindowTitle(windowTitle, 20);
 
     ui->labelMainScreen->setStyleSheet("");
-    ui->labelStatus->setText("状态：正在共享 " + currentShareSource);
+    startLocalMediaBackend();
+    ui->labelStatus->setText("状态：正在共享 " + currentShareSource + optionSummary());
     ui->btnShare->setText("共享中");
     ui->btnAnnotate->setEnabled(true);
     ui->btnAnnotate->setText("画笔");
+    showShareToolbar();
 
     shareTimer->start();
     captureScreen();
@@ -607,6 +1353,8 @@ void MainWindow::showAnnotationWindow()
         }
     });
 
+    connectAnnotationToSender(annotationWindow);
+
     connect(annotationWindow, &AnnotationWindow::closed, this, [this]() {
         if (annotationWindow) {
             annotationWindow->hide();
@@ -619,6 +1367,9 @@ void MainWindow::showAnnotationWindow()
         if (sharing) {
             ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已关闭");
             ui->btnAnnotate->setText("画笔");
+            if (shareToolbar) {
+                shareToolbar->setAnnotationEnabled(false);
+            }
         } else {
             ui->labelStatus->setText("状态：未共享");
         }
@@ -633,6 +1384,9 @@ void MainWindow::showAnnotationWindow()
 
     ui->btnAnnotate->setText("关闭画笔");
     ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已打开");
+    if (shareToolbar) {
+        shareToolbar->setAnnotationEnabled(true);
+    }
     if (currentShareType == ShareSourceType::Whiteboard) {
         updateWhiteboardPreview();
     }
@@ -652,6 +1406,9 @@ void MainWindow::toggleAnnotationWindow()
             annotationWindow->hide();
             ui->btnAnnotate->setText("画笔");
             ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已关闭");
+            if (shareToolbar) {
+                shareToolbar->setAnnotationEnabled(false);
+            }
             if (currentShareType == ShareSourceType::Whiteboard) {
                 updateWhiteboardPreview();
             } else {
@@ -664,6 +1421,9 @@ void MainWindow::toggleAnnotationWindow()
             annotationWindow->activateWindow();
             ui->btnAnnotate->setText("关闭画笔");
             ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已打开");
+            if (shareToolbar) {
+                shareToolbar->setAnnotationEnabled(true);
+            }
         }
         return;
     }
@@ -677,6 +1437,8 @@ void MainWindow::updatePreviewWithPixmap(const QPixmap &pixmap)
         return;
     }
 
+    sendFrameToLocalSender(pixmap);
+
     QPixmap mainPixmap = pixmap.scaled(
         ui->labelMainScreen->size(),
         Qt::KeepAspectRatio,
@@ -685,17 +1447,7 @@ void MainWindow::updatePreviewWithPixmap(const QPixmap &pixmap)
 
     ui->labelMainScreen->setPixmap(mainPixmap);
 
-    QPixmap smallPixmap = pixmap.scaled(
-        ui->labelSmall1->size(),
-        Qt::KeepAspectRatio,
-        Qt::FastTransformation
-        );
-
-    ui->labelSmall1->setPixmap(smallPixmap);
-    ui->labelSmall2->setPixmap(smallPixmap);
-    ui->labelSmall3->setPixmap(smallPixmap);
-    ui->labelSmall4->setPixmap(smallPixmap);
-    ui->labelSmall5->setPixmap(smallPixmap);
+    // 五个小窗口现在表示参会用户/摄像头，不再重复显示共享屏幕。
 }
 
 void MainWindow::showWhiteboardPreview()
@@ -714,11 +1466,10 @@ void MainWindow::showWhiteboardPreview()
 
     updateWhiteboardPreview();
 
-    ui->labelSmall1->clear(); ui->labelSmall1->setText("白板");
-    ui->labelSmall2->clear(); ui->labelSmall2->setText("用户2");
-    ui->labelSmall3->clear(); ui->labelSmall3->setText("用户3");
-    ui->labelSmall4->clear(); ui->labelSmall4->setText("用户4");
-    ui->labelSmall5->clear(); ui->labelSmall5->setText("用户5");
+    // 白板共享只占用大窗口，小窗口继续留给本机/远端摄像头。
+    if (!cameraOn) {
+        setSmallLabelPlaceholder(ui->labelSmall1, QStringLiteral("本机摄像头"));
+    }
 }
 
 QRect MainWindow::whiteboardGlobalRect() const
@@ -862,21 +1613,11 @@ void MainWindow::updateWhiteboardPreview()
     // 避免同一条线在 QLabel 和 overlay 上各画一次导致颜色变深。
     // 小窗口仍然更新，模拟“接收端已经收到白板笔画”。
     if (annotationWindow && annotationWindow->isVisible()) {
+        sendFrameToLocalSender(whiteboard);
         ui->labelMainScreen->clear();
         ui->labelMainScreen->setText(QString());
         ui->labelMainScreen->setAlignment(Qt::AlignCenter);
 
-        QPixmap smallPixmap = whiteboard.scaled(
-            ui->labelSmall1->size(),
-            Qt::KeepAspectRatio,
-            Qt::FastTransformation
-            );
-
-        ui->labelSmall1->setPixmap(smallPixmap);
-        ui->labelSmall2->setPixmap(smallPixmap);
-        ui->labelSmall3->setPixmap(smallPixmap);
-        ui->labelSmall4->setPixmap(smallPixmap);
-        ui->labelSmall5->setPixmap(smallPixmap);
         return;
     }
 
@@ -1021,7 +1762,7 @@ QPixmap MainWindow::captureWindowPixmap(quintptr windowHandle) const
 
 void MainWindow::captureScreen()
 {
-    if (!sharing) {
+    if (!sharing || sharePaused) {
         return;
     }
 
@@ -1069,6 +1810,7 @@ void MainWindow::captureScreen()
         return;
     }
 
+    pixmap = composeCursorOnPixmap(pixmap);
     pixmap = composeAnnotationOnPixmap(pixmap);
 
     ui->labelMainScreen->setStyleSheet("");
@@ -1077,6 +1819,8 @@ void MainWindow::captureScreen()
 
 void MainWindow::endShare()
 {
+    stopLocalMediaBackend();
+
     if (shareTimer) {
         shareTimer->stop();
     }
@@ -1085,6 +1829,8 @@ void MainWindow::endShare()
         sharePopup->hide();
     }
 
+    hideShareToolbar();
+
     if (annotationWindow) {
         annotationWindow->hide();
         annotationWindow->deleteLater();
@@ -1092,6 +1838,8 @@ void MainWindow::endShare()
     }
 
     sharing = false;
+    sharePaused = false;
+    micMuted = false;
     currentShareSource.clear();
     currentShareType = ShareSourceType::None;
     currentScreenIndex = 0;
@@ -1107,9 +1855,11 @@ void MainWindow::endShare()
     ui->labelMainScreen->setText("等待共享");
     ui->labelMainScreen->setAlignment(Qt::AlignCenter);
 
-    ui->labelSmall1->clear(); ui->labelSmall1->setText("用户1");
-    ui->labelSmall2->clear(); ui->labelSmall2->setText("用户2");
-    ui->labelSmall3->clear(); ui->labelSmall3->setText("用户3");
-    ui->labelSmall4->clear(); ui->labelSmall4->setText("用户4");
-    ui->labelSmall5->clear(); ui->labelSmall5->setText("用户5");
+    if (!cameraOn) {
+        setSmallLabelPlaceholder(ui->labelSmall1, QStringLiteral("本机摄像头"));
+    }
+    // 远端摄像头窗口不因为结束共享而清空，避免会议中停止共享时把对方画面一起清掉。
+    setSmallLabelPlaceholder(ui->labelSmall3, QStringLiteral("用户3"));
+    setSmallLabelPlaceholder(ui->labelSmall4, QStringLiteral("用户4"));
+    setSmallLabelPlaceholder(ui->labelSmall5, QStringLiteral("用户5"));
 }
