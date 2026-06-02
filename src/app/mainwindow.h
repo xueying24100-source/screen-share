@@ -35,6 +35,7 @@ class CameraManager;
 class TcpPacketTransport;
 class MediaReceiver;
 class INetworkTransport;
+class ScreenCapturer;
 
 class MainWindow : public QMainWindow
 {
@@ -69,6 +70,8 @@ private slots:
     void onLocalCameraFrame(const QImage &image);
     void onRemoteMainFrame(const QImage &image);
     void onRemoteCameraFrame(const QImage &image);
+    void onScreenCapturerFrame(const QImage &frame);
+    void onScreenCapturerError(const QString &msg);
 
 private:
     enum class ShareSourceType {
@@ -163,6 +166,7 @@ private:
     CameraManager *cameraManager = nullptr;
     TcpPacketTransport *networkTransport = nullptr;
     MediaReceiver *mediaReceiver = nullptr;
+    ScreenCapturer *screenCapturer = nullptr;
 };
 
 #endif

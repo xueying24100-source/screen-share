@@ -10,7 +10,7 @@
 #include <QThread>
 #include <QTimer>
 
-#include "annotationoverlay.h"
+#include "../annotation/annotationoverlay.h"
 
 // Sender v4: media hub with worker-thread JPEG encoding and latest-frame dropping.
 // The UI thread submits frames quickly; heavy JPEG encoding runs in VideoEncodeWorker.

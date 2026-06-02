@@ -4,7 +4,7 @@
 #include <QByteArray>
 #include <QHostAddress>
 
-#include "sender.h"
+#include "../media/sender.h"
 
 class QTcpServer;
 class QTcpSocket;

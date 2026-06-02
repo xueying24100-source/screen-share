@@ -1,15 +1,17 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "annotationwindow.h"
-#include "audiocapturer.h"
-#include "systemaudiocapturer.h"
-#include "audiomixer.h"
-#include "sender.h"
+#include "../annotation/annotationwindow.h"
+#include "../audio/audiocapturer.h"
+#include "../audio/systemaudiocapturer.h"
+#include "../audio/audiomixer.h"
+#include "../media/sender.h"
 #include "sharetoolbar.h"
-#include "audioplayer.h"
-#include "cameramanager.h"
-#include "networktransport.h"
-#include "mediareceiver.h"
+#include "../audio/audioplayer.h"
+#include "../media/cameramanager.h"
+#include "../network/networktransport.h"
+#include "../media/mediareceiver.h"
+#include "../capture/screencapturer.h"
+#include "../capture/sourceenumerator.h"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -46,73 +48,6 @@
 #include <windows.h>
 #endif
 
-namespace {
-#ifdef Q_OS_WIN
-struct EnumWindowContext
-{
-    QList<MainWindow::WindowItem> *items = nullptr;
-};
-
-BOOL CALLBACK enumCapturableWindows(HWND hwnd, LPARAM lParam)
-{
-    auto *ctx = reinterpret_cast<EnumWindowContext*>(lParam);
-    if (!ctx || !ctx->items) {
-        return TRUE;
-    }
-
-    if (!IsWindowVisible(hwnd)) {
-        return TRUE;
-    }
-
-    // 过滤掉工具窗口、无标题窗口、子窗口，尽量接近任务栏里能看到的窗口。
-    if (GetAncestor(hwnd, GA_ROOT) != hwnd) {
-        return TRUE;
-    }
-
-    const LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    if (exStyle & WS_EX_TOOLWINDOW) {
-        return TRUE;
-    }
-
-    const int titleLen = GetWindowTextLengthW(hwnd);
-    if (titleLen <= 0) {
-        return TRUE;
-    }
-
-    wchar_t titleBuffer[512] = {0};
-    GetWindowTextW(hwnd, titleBuffer, 511);
-    QString title = QString::fromWCharArray(titleBuffer).trimmed();
-    if (title.isEmpty()) {
-        return TRUE;
-    }
-
-    // 排除一些系统外壳窗口，避免列表太乱。
-    if (title == QStringLiteral("Program Manager") ||
-        title == QStringLiteral("Windows 输入体验") ||
-        title == QStringLiteral("Windows Input Experience")) {
-        return TRUE;
-    }
-
-    RECT rect{};
-    GetWindowRect(hwnd, &rect);
-    const int width = rect.right - rect.left;
-    const int height = rect.bottom - rect.top;
-    const bool minimized = IsIconic(hwnd);
-    if (!minimized && (width < 120 || height < 80)) {
-        return TRUE;
-    }
-
-    MainWindow::WindowItem item;
-    item.handle = reinterpret_cast<quintptr>(hwnd);
-    item.title = title;
-    item.minimized = minimized;
-    ctx->items->append(item);
-
-    return TRUE;
-}
-#endif
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -133,7 +68,13 @@ MainWindow::MainWindow(QWidget *parent)
     cameraManager->setMaxFrameSize(QSize(640, 360));
     networkTransport = new TcpPacketTransport(this);
     mediaReceiver = new MediaReceiver(this);
+    screenCapturer = new ScreenCapturer(this);
     localSender->setTransport(debugTransport);
+
+    connect(screenCapturer, &ScreenCapturer::frameCaptured,
+            this, &MainWindow::onScreenCapturerFrame);
+    connect(screenCapturer, &ScreenCapturer::captureError,
+            this, &MainWindow::onScreenCapturerError);
 
     connect(micCapturer, &AudioCapturer::audioDataReady,
             audioMixer, &AudioMixer::pushMicPcm);
@@ -479,10 +420,16 @@ void MainWindow::refreshSharePopupOptions()
         QToolButton *btn = new QToolButton(sharePopup);
         btn->setText(text);
         btn->setToolTip(item.title);
-        btn->setIcon(style()->standardIcon(item.minimized
-                                               ? QStyle::SP_TitleBarMinButton
-                                               : QStyle::SP_TitleBarNormalButton));
-        btn->setIconSize(QSize(42, 42));
+
+        QImage thumbnail = ScreenCapturer::captureWindowOnce(item.handle, QSize(120, 68));
+        if (!thumbnail.isNull()) {
+            btn->setIcon(QPixmap::fromImage(thumbnail));
+        } else {
+            btn->setIcon(style()->standardIcon(item.minimized
+                                                   ? QStyle::SP_TitleBarMinButton
+                                                   : QStyle::SP_TitleBarNormalButton));
+        }
+        btn->setIconSize(QSize(120, 68));
         btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         btn->setFixedSize(150, 110);
 
@@ -528,16 +475,14 @@ void MainWindow::clearWindowButtons()
 QList<MainWindow::WindowItem> MainWindow::listOpenWindows() const
 {
     QList<WindowItem> items;
-
-#ifdef Q_OS_WIN
-    EnumWindowContext ctx;
-    ctx.items = &items;
-    EnumWindows(enumCapturableWindows, reinterpret_cast<LPARAM>(&ctx));
-#else
-    // Qt 本身没有跨平台枚举所有外部应用窗口的接口。
-    // Windows 版本用 Win32 EnumWindows 实现，其他平台这里先返回空列表。
-#endif
-
+    const QList<WindowInfo> windows = SourceEnumerator::enumerateWindows();
+    for (const auto& w : windows) {
+        WindowItem item;
+        item.handle = w.handle;
+        item.title = w.title;
+        item.minimized = w.minimized;
+        items.append(item);
+    }
     return items;
 }
 
@@ -1002,6 +947,45 @@ void MainWindow::onRemoteCameraFrame(const QImage &image)
     updateVideoLabel(ui->labelSmall2, image, QStringLiteral("远端摄像头"));
 }
 
+void MainWindow::onScreenCapturerFrame(const QImage &frame)
+{
+    if (!sharing || sharePaused) {
+        return;
+    }
+
+    updateAnnotationWindowGeometry();
+
+    if (currentShareType == ShareSourceType::Whiteboard) {
+        updateWhiteboardPreview();
+        return;
+    }
+
+    if (frame.isNull()) {
+        ui->labelMainScreen->clear();
+        ui->labelMainScreen->setText("暂时无法获取共享画面");
+        return;
+    }
+
+    QPixmap pixmap = QPixmap::fromImage(frame);
+    pixmap = composeCursorOnPixmap(pixmap);
+    pixmap = composeAnnotationOnPixmap(pixmap);
+
+    ui->labelMainScreen->setStyleSheet("");
+    updatePreviewWithPixmap(pixmap);
+}
+
+void MainWindow::onScreenCapturerError(const QString &msg)
+{
+    qWarning() << "[ScreenCapturer]" << msg;
+    if (msg.contains("closed", Qt::CaseInsensitive)) {
+        ui->labelStatus->setText("状态：共享窗口已关闭");
+    } else if (msg.contains("最小化") || msg.contains("minimized", Qt::CaseInsensitive)) {
+        ui->labelStatus->setText("状态：共享窗口已最小化");
+    } else {
+        ui->labelStatus->setText("状态：" + msg);
+    }
+}
+
 void MainWindow::updateShareTimerInterval()
 {
     if (!shareTimer) {
@@ -1189,6 +1173,9 @@ void MainWindow::startShareScreen(int screenIndex)
     if (shareTimer) {
         shareTimer->stop();
     }
+    if (screenCapturer) {
+        screenCapturer->stop();
+    }
 
     sharing = true;
     currentShareType = ShareSourceType::Screen;
@@ -1204,8 +1191,9 @@ void MainWindow::startShareScreen(int screenIndex)
     ui->btnAnnotate->setText("画笔");
     showShareToolbar();
 
-    shareTimer->start();
-    captureScreen();
+    if (screenCapturer) {
+        screenCapturer->startScreen(screenIndex, checkSmooth && checkSmooth->isChecked() ? 30 : 10);
+    }
 }
 
 void MainWindow::startShareWhiteboard()
@@ -1251,9 +1239,6 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
         return;
     }
 
-    // 如果窗口在任务栏里最小化，先恢复窗口。
-    // 注意：不要对所有窗口都强制 SetForegroundWindow，否则点击共享后会把目标窗口突然弹到最前面。
-    // 只有最小化窗口需要恢复并临时置前，避免抓到黑屏或空内容。
     if (IsIconic(hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
         SetForegroundWindow(hwnd);
@@ -1266,6 +1251,9 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
 
     if (shareTimer) {
         shareTimer->stop();
+    }
+    if (screenCapturer) {
+        screenCapturer->stop();
     }
 
     sharing = true;
@@ -1282,8 +1270,10 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
     ui->btnAnnotate->setText("画笔");
     showShareToolbar();
 
-    shareTimer->start();
-    captureScreen();
+    if (screenCapturer) {
+        screenCapturer->setWgcOptions(checkShowCursor && checkShowCursor->isChecked(), true, 0);
+        screenCapturer->startWindow(windowHandle, checkSmooth && checkSmooth->isChecked() ? 30 : 10);
+    }
 }
 
 void MainWindow::onSelectDesktop1()
@@ -1766,55 +1756,11 @@ void MainWindow::captureScreen()
         return;
     }
 
-    // 目标窗口或主窗口位置变化时，同步画笔层的位置，保证笔迹坐标和共享图像坐标一致。
     updateAnnotationWindowGeometry();
 
     if (currentShareType == ShareSourceType::Whiteboard) {
         updateWhiteboardPreview();
-        return;
     }
-
-    QPixmap pixmap;
-
-    if (currentShareType == ShareSourceType::Screen) {
-        const QList<QScreen*> screens = QGuiApplication::screens();
-        if (currentScreenIndex < 0 || currentScreenIndex >= screens.size()) {
-            ui->labelStatus->setText("状态：扩展屏已断开");
-            return;
-        }
-
-        QScreen *screen = screens.at(currentScreenIndex);
-        if (!screen) {
-            return;
-        }
-        pixmap = screen->grabWindow(0);
-    } else if (currentShareType == ShareSourceType::Window) {
-        if (currentWindowHandle == 0) {
-            return;
-        }
-
-#ifdef Q_OS_WIN
-        HWND hwnd = reinterpret_cast<HWND>(currentWindowHandle);
-        if (!IsWindow(hwnd)) {
-            ui->labelStatus->setText("状态：共享窗口已关闭");
-            return;
-        }
-#endif
-
-        pixmap = captureWindowPixmap(currentWindowHandle);
-    }
-
-    if (pixmap.isNull()) {
-        ui->labelMainScreen->clear();
-        ui->labelMainScreen->setText("暂时无法获取共享画面");
-        return;
-    }
-
-    pixmap = composeCursorOnPixmap(pixmap);
-    pixmap = composeAnnotationOnPixmap(pixmap);
-
-    ui->labelMainScreen->setStyleSheet("");
-    updatePreviewWithPixmap(pixmap);
 }
 
 void MainWindow::endShare()
@@ -1823,6 +1769,10 @@ void MainWindow::endShare()
 
     if (shareTimer) {
         shareTimer->stop();
+    }
+
+    if (screenCapturer) {
+        screenCapturer->stop();
     }
 
     if (sharePopup) {
@@ -1858,7 +1808,6 @@ void MainWindow::endShare()
     if (!cameraOn) {
         setSmallLabelPlaceholder(ui->labelSmall1, QStringLiteral("本机摄像头"));
     }
-    // 远端摄像头窗口不因为结束共享而清空，避免会议中停止共享时把对方画面一起清掉。
     setSmallLabelPlaceholder(ui->labelSmall3, QStringLiteral("用户3"));
     setSmallLabelPlaceholder(ui->labelSmall4, QStringLiteral("用户4"));
     setSmallLabelPlaceholder(ui->labelSmall5, QStringLiteral("用户5"));
