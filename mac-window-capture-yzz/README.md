@@ -11,6 +11,7 @@
 - `ScreenCapturer::startScreen()`
 - `ScreenCapturer::startWindow()`
 - `ScreenCapturer::stop()`
+- `ScreenCapturer::captureWindowOnce()`
 - `frameCaptured(const QImage&)`
 - `captureError(const QString&)`
 - `frameMetadataChanged(const CaptureFrameMetadata&)`
@@ -90,7 +91,7 @@ macOS 采集屏幕或窗口通常需要屏幕录制权限。如果窗口列表�
 - 当前窗口采集使用 `CGWindowListCreateImage`，在 macOS 14 SDK 下会出现 deprecated warning。
 - 该 demo 只负责本地采集和本地预览，不包含编码、网络发送、接收端显示。
 - 部分受保护内容、最小化窗口或系统限制窗口可能无法采集。
-- 窗口缩略图目前使用占位图，实际画面会在开始采集后显示。
+- 窗口缩略图和实时窗口采集共用 `captureWindowOnce()` 的单帧截图逻辑；如果截图失败，缩略图会回退为占位图。
 
 ## 后续集成方式
 

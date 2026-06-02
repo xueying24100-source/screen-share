@@ -63,6 +63,27 @@ QImage imageFromCGImage(CGImageRef imageRef)
     CGContextRelease(context);
     return image;
 }
+
+QImage captureWindowRaw(quintptr windowId)
+{
+    if (windowId == 0) {
+        return {};
+    }
+
+    CGImageRef imageRef = CGWindowListCreateImage(
+        CGRectNull,
+        kCGWindowListOptionIncludingWindow,
+        static_cast<CGWindowID>(windowId),
+        kCGWindowImageBoundsIgnoreFraming | kCGWindowImageNominalResolution);
+
+    if (!imageRef) {
+        return {};
+    }
+
+    const QImage frame = imageFromCGImage(imageRef);
+    CGImageRelease(imageRef);
+    return frame;
+}
 #endif
 }
 
@@ -71,6 +92,17 @@ ScreenCapturer::ScreenCapturer(QObject *parent)
     , m_timer(new QTimer(this))
 {
     connect(m_timer, &QTimer::timeout, this, &ScreenCapturer::captureFrame);
+}
+
+QImage ScreenCapturer::captureWindowOnce(quintptr windowId, const QSize &outputSize)
+{
+#ifdef Q_OS_MACOS
+    return prepareOutputFrame(captureWindowRaw(windowId), outputSize);
+#else
+    Q_UNUSED(windowId);
+    Q_UNUSED(outputSize);
+    return {};
+#endif
 }
 
 void ScreenCapturer::start(int fps)
@@ -164,23 +196,9 @@ void ScreenCapturer::captureScreen()
 void ScreenCapturer::captureWindow()
 {
 #ifdef Q_OS_MACOS
-    const CGWindowID windowId = static_cast<CGWindowID>(m_windowHandle);
-    CGImageRef imageRef = CGWindowListCreateImage(
-        CGRectNull,
-        kCGWindowListOptionIncludingWindow,
-        windowId,
-        kCGWindowImageBoundsIgnoreFraming | kCGWindowImageNominalResolution);
-
-    if (!imageRef) {
-        emit captureError("无法捕获该窗口，请检查屏幕录制权限或窗口是否仍然存在");
-        return;
-    }
-
-    const QImage rawFrame = imageFromCGImage(imageRef);
-    CGImageRelease(imageRef);
-
+    const QImage rawFrame = captureWindowRaw(m_windowHandle);
     if (rawFrame.isNull()) {
-        emit captureError("Window frame conversion failed");
+        emit captureError("无法捕获该窗口，请检查屏幕录制权限或窗口是否仍然存在");
         return;
     }
 
@@ -211,4 +229,3 @@ void ScreenCapturer::emitFrame(const QImage &frame, const QString &backendName,
     meta.frameIndex = m_frameIndex;
     emit frameMetadataChanged(meta);
 }
-

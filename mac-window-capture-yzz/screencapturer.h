@@ -31,6 +31,8 @@ public:
     void setOutputSize(const QSize &size) { m_outputSize = size; }
     QSize outputSize() const { return m_outputSize; }
 
+    static QImage captureWindowOnce(quintptr windowId, const QSize &outputSize = {});
+
 signals:
     void frameCaptured(const QImage &frame);
     void captureError(const QString &msg);
@@ -57,4 +59,3 @@ private:
 };
 
 #endif // SCREENCAPTURER_H
-
