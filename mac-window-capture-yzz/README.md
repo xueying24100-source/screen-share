@@ -28,7 +28,7 @@ mac-window-capture-yzz/
 ├── README.md
 ├── main.cpp                  # 独立测试窗口：选择目标、预览采集帧、停止采集
 ├── sourceenumerator.h/.cpp   # 屏幕/窗口枚举
-├── screencapturer.h/.cpp     # 屏幕/窗口采集，输出 QImage
+├── screencapturer.h/.mm      # 屏幕/窗口采集，输出 QImage；Objective-C++ 用于接入 ScreenCaptureKit
 └── sharesourcepicker.h/.cpp  # 选择共享内容弹窗
 ```
 
@@ -64,14 +64,14 @@ void frameMetadataChanged(const CaptureFrameMetadata &meta);
 - 屏幕枚举：`QGuiApplication::screens()`
 - 屏幕采集：`QScreen::grabWindow(0)`
 - 窗口枚举：`CGWindowListCopyWindowInfo`
-- 窗口采集：macOS 14+ 优先使用 `ScreenCaptureKit` 的 `SCScreenshotManager`
-- 窗口采集 fallback：`CGWindowListCreateImage`
+- 窗口单帧采集：macOS 14+ 优先使用 `ScreenCaptureKit` 的 `SCScreenshotManager`
+- 窗口单帧采集 fallback：`CGWindowListCreateImage`
 - 图像输出：转换为 `QImage::Format_RGB32`
 - 定时采集：`QTimer`
 
-窗口实时采集和窗口缩略图共用 `captureWindowOnce()` 的单帧截图逻辑，避免两套采集实现分叉。
+窗口实时采集和窗口缩略图共用 `captureWindowOnce()` 的单帧截图逻辑，避免两套采集实现分叉。实时采集当前是“单帧截图 + QTimer 定时刷新”的 demo 实现，不是 `SCStream` 持续视频流。
 
-macOS 14 开始 `CGWindowListCreateImage` 会提示 deprecated，因此当前版本已经加入 ScreenCaptureKit 路线；当 ScreenCaptureKit 不可用或截图失败时，再回退到 CoreGraphics。
+macOS 14 开始 `CGWindowListCreateImage` 会提示 deprecated，因此当前版本已经加入 ScreenCaptureKit 路线；当系统版本低于 macOS 14、ScreenCaptureKit 不可用、目标窗口找不到或截图失败时，再回退到 CoreGraphics。
 
 ## 环境要求
 
@@ -79,12 +79,19 @@ macOS 14 开始 `CGWindowListCreateImage` 会提示 deprecated，因此当前版
 - Qt 6.5 或更高版本，需包含 Core / Gui / Widgets
 - CMake
 - C++17 编译器
+- macOS 14+ 可使用 ScreenCaptureKit 截图路径；低版本会走 CoreGraphics fallback
 
 本机验证环境：
 
 - Qt 6.11.1
 - Qt 自带 CMake
 - AppleClang / Command Line Tools
+
+CMake 会链接以下 macOS framework：
+
+- `ApplicationServices`
+- `ScreenCaptureKit`
+- `CoreMedia`
 
 ## 构建与运行
 
@@ -137,7 +144,7 @@ ScreenCapturer::captureWindowOnce(windowId, QSize(220, 124));
 区别在于底层实现不同：
 
 - Windows：`PrintWindow` / `BitBlt` / 屏幕裁剪
-- macOS：`CGWindowListCreateImage`
+- macOS：`ScreenCaptureKit` / `CGWindowListCreateImage` fallback
 
 上层调用方式保持相近，方便后续合并到统一客户端。
 
@@ -173,6 +180,7 @@ capturer->stop();
 ## 已知限制
 
 - macOS 14+ 优先使用 ScreenCaptureKit；低版本或失败场景会回退到 `CGWindowListCreateImage`，因此编译时仍可能看到 deprecated warning。
+- 当前 ScreenCaptureKit 路线使用 `SCScreenshotManager` 做单帧截图；如果后续要做更高性能的正式实时共享，可以继续升级为 `SCStream` 帧流。
 - 该 demo 只负责本地采集和本地预览，不包含编码、网络发送、接收端显示。
 - 部分受保护内容、最小化窗口或系统限制窗口可能无法采集。
 - 窗口缩略图如果截图失败，会回退为占位图。
@@ -183,3 +191,5 @@ capturer->stop();
 可以这样概括本模块：
 
 > 我负责 macOS 端窗口枚举与画面采集。当前完成了独立 demo，能够枚举屏幕和应用窗口，选择采集源后定时输出 `QImage` 帧并本地预览；接口对齐 Windows 端的 `startWindow`、`startScreen`、`captureWindowOnce`，后续可以接入客户端显示或网络发送模块。
+
+当前实现已经加入 ScreenCaptureKit 路线：macOS 14+ 优先使用 `SCScreenshotManager` 截取窗口单帧，失败时回退到 CoreGraphics，保证 demo 可运行性。
