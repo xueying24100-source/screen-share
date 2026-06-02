@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(mac_window_capture_yzz LANGUAGES CXX)
+project(mac_window_capture_yzz LANGUAGES CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,7 +12,7 @@ qt_add_executable(mac_window_capture_yzz
     main.cpp
     sourceenumerator.cpp
     sourceenumerator.h
-    screencapturer.cpp
+    screencapturer.mm
     screencapturer.h
     sharesourcepicker.cpp
     sharesourcepicker.h
@@ -24,5 +24,6 @@ target_link_libraries(mac_window_capture_yzz
         Qt6::Gui
         Qt6::Widgets
         "-framework ApplicationServices"
+        "-framework ScreenCaptureKit"
+        "-framework CoreMedia"
 )
-

@@ -6,6 +6,8 @@
 
 #ifdef Q_OS_MACOS
 #include <ApplicationServices/ApplicationServices.h>
+#include <CoreVideo/CoreVideo.h>
+#include <ScreenCaptureKit/ScreenCaptureKit.h>
 #endif
 
 namespace {
@@ -64,7 +66,7 @@ QImage imageFromCGImage(CGImageRef imageRef)
     return image;
 }
 
-QImage captureWindowRaw(quintptr windowId)
+QImage captureWindowRawWithCoreGraphics(quintptr windowId)
 {
     if (windowId == 0) {
         return {};
@@ -82,6 +84,96 @@ QImage captureWindowRaw(quintptr windowId)
 
     const QImage frame = imageFromCGImage(imageRef);
     CGImageRelease(imageRef);
+    return frame;
+}
+
+QImage captureWindowRawWithScreenCaptureKit(quintptr windowId)
+{
+    if (windowId == 0) {
+        return {};
+    }
+
+    if (@available(macOS 14.0, *)) {
+        // Continue with ScreenCaptureKit below.
+    } else {
+        return {};
+    }
+
+    @autoreleasepool {
+        dispatch_semaphore_t contentSemaphore = dispatch_semaphore_create(0);
+        __block SCWindow *targetWindow = nil;
+
+        [SCShareableContent getShareableContentExcludingDesktopWindows:YES
+                                                   onScreenWindowsOnly:YES
+                                                     completionHandler:^(SCShareableContent *shareableContent, NSError *error) {
+            if (!error && shareableContent) {
+                const CGWindowID targetId = static_cast<CGWindowID>(windowId);
+                for (SCWindow *window in shareableContent.windows) {
+                    if (window.windowID == targetId) {
+                        targetWindow = [window retain];
+                        break;
+                    }
+                }
+            }
+            dispatch_semaphore_signal(contentSemaphore);
+        }];
+
+        if (dispatch_semaphore_wait(contentSemaphore, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) != 0) {
+            return {};
+        }
+        if (!targetWindow) {
+            return {};
+        }
+
+        SCContentFilter *filter = [[SCContentFilter alloc] initWithDesktopIndependentWindow:targetWindow];
+        SCStreamConfiguration *configuration = [[SCStreamConfiguration alloc] init];
+
+        const CGFloat scale = filter.pointPixelScale > 0 ? filter.pointPixelScale : 2.0;
+        const CGRect contentRect = filter.contentRect;
+        configuration.width = static_cast<size_t>(qMax<CGFloat>(1, contentRect.size.width * scale));
+        configuration.height = static_cast<size_t>(qMax<CGFloat>(1, contentRect.size.height * scale));
+        configuration.pixelFormat = kCVPixelFormatType_32BGRA;
+        configuration.scalesToFit = YES;
+        configuration.showsCursor = NO;
+        configuration.ignoreShadowsSingleWindow = YES;
+        configuration.preservesAspectRatio = YES;
+
+        dispatch_semaphore_t captureSemaphore = dispatch_semaphore_create(0);
+        __block QImage capturedFrame;
+
+        [SCScreenshotManager captureImageWithFilter:filter
+                                      configuration:configuration
+                                  completionHandler:^(CGImageRef imageRef, NSError *error) {
+            if (!error && imageRef) {
+                capturedFrame = imageFromCGImage(imageRef);
+            }
+            dispatch_semaphore_signal(captureSemaphore);
+        }];
+
+        dispatch_semaphore_wait(captureSemaphore, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC));
+
+        [configuration release];
+        [filter release];
+        [targetWindow release];
+
+        return capturedFrame;
+    }
+}
+
+QImage captureWindowRaw(quintptr windowId, QString *backendName = nullptr)
+{
+    QImage frame = captureWindowRawWithScreenCaptureKit(windowId);
+    if (!frame.isNull()) {
+        if (backendName) {
+            *backendName = "ScreenCaptureKit";
+        }
+        return frame;
+    }
+
+    frame = captureWindowRawWithCoreGraphics(windowId);
+    if (!frame.isNull() && backendName) {
+        *backendName = "CGWindowListCreateImage";
+    }
     return frame;
 }
 #endif
@@ -196,14 +288,15 @@ void ScreenCapturer::captureScreen()
 void ScreenCapturer::captureWindow()
 {
 #ifdef Q_OS_MACOS
-    const QImage rawFrame = captureWindowRaw(m_windowHandle);
+    QString backendName;
+    const QImage rawFrame = captureWindowRaw(m_windowHandle, &backendName);
     if (rawFrame.isNull()) {
         emit captureError("无法捕获该窗口，请检查屏幕录制权限或窗口是否仍然存在");
         return;
     }
 
     emitFrame(prepareOutputFrame(rawFrame, m_outputSize),
-              "CGWindowListCreateImage",
+              backendName,
               rawFrame.size());
 #else
     emit captureError("Window capture is only implemented on macOS");

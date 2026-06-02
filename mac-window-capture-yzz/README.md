@@ -59,18 +59,19 @@ void frameMetadataChanged(const CaptureFrameMetadata &meta);
 
 ## 技术方案
 
-当前版本使用 CoreGraphics + Qt：
+当前版本使用 ScreenCaptureKit / CoreGraphics + Qt：
 
 - 屏幕枚举：`QGuiApplication::screens()`
 - 屏幕采集：`QScreen::grabWindow(0)`
 - 窗口枚举：`CGWindowListCopyWindowInfo`
-- 窗口采集：`CGWindowListCreateImage`
+- 窗口采集：macOS 14+ 优先使用 `ScreenCaptureKit` 的 `SCScreenshotManager`
+- 窗口采集 fallback：`CGWindowListCreateImage`
 - 图像输出：转换为 `QImage::Format_RGB32`
 - 定时采集：`QTimer`
 
 窗口实时采集和窗口缩略图共用 `captureWindowOnce()` 的单帧截图逻辑，避免两套采集实现分叉。
 
-macOS 14 开始 `CGWindowListCreateImage` 会提示 deprecated。这个版本适合课程 demo 和接口联调；后续正式版本可以在保持上层接口不变的情况下，把底层替换为 `ScreenCaptureKit`。
+macOS 14 开始 `CGWindowListCreateImage` 会提示 deprecated，因此当前版本已经加入 ScreenCaptureKit 路线；当 ScreenCaptureKit 不可用或截图失败时，再回退到 CoreGraphics。
 
 ## 环境要求
 
@@ -171,7 +172,7 @@ capturer->stop();
 
 ## 已知限制
 
-- 当前窗口采集使用 `CGWindowListCreateImage`，在 macOS 14 SDK 下会出现 deprecated warning。
+- macOS 14+ 优先使用 ScreenCaptureKit；低版本或失败场景会回退到 `CGWindowListCreateImage`，因此编译时仍可能看到 deprecated warning。
 - 该 demo 只负责本地采集和本地预览，不包含编码、网络发送、接收端显示。
 - 部分受保护内容、最小化窗口或系统限制窗口可能无法采集。
 - 窗口缩略图如果截图失败，会回退为占位图。
