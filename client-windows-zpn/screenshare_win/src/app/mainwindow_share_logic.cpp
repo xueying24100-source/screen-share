@@ -252,17 +252,16 @@ void MainWindow::captureScreen()
     QPixmap pixmap;
 
     if (currentShareType == ShareSourceType::Screen) {
-        const QList<QScreen*> screens = QGuiApplication::screens();
+        const QList<QScreen*> screens = ScreenCapturer::screens();
         if (currentScreenIndex < 0 || currentScreenIndex >= screens.size()) {
             ui->labelStatus->setText("状态：扩展屏已断开");
             return;
         }
 
-        QScreen *screen = screens.at(currentScreenIndex);
-        if (!screen) {
-            return;
+        QImage screenImage = ScreenCapturer::captureScreenOnce(currentScreenIndex);
+        if (!screenImage.isNull()) {
+            pixmap = QPixmap::fromImage(screenImage);
         }
-        pixmap = screen->grabWindow(0);
     } else if (currentShareType == ShareSourceType::Window) {
         if (currentWindowHandle == 0) {
             return;
@@ -276,7 +275,10 @@ void MainWindow::captureScreen()
         }
 #endif
 
-        pixmap = captureWindowPixmap(currentWindowHandle);
+        QImage windowImage = ScreenCapturer::captureWindowOnce(currentWindowHandle);
+        if (!windowImage.isNull()) {
+            pixmap = QPixmap::fromImage(windowImage);
+        }
     }
 
     if (pixmap.isNull()) {

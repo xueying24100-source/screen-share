@@ -12,6 +12,8 @@
 #include "cameramanager.h"
 #include "networktransport.h"
 #include "mediareceiver.h"
+#include "screencapturer.h"
+#include "sourceenumerator.h"
 
 #include <QGuiApplication>
 #include <QScreen>

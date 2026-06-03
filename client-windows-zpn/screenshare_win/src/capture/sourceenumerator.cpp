@@ -1,7 +1,5 @@
 #include "sourceenumerator.h"
 
-#include <QGuiApplication>
-#include <QScreen>
 #include <vector>
 
 #ifdef Q_OS_WIN
@@ -10,29 +8,6 @@
 #endif
 #include <Windows.h>
 #endif
-
-QList<ScreenInfo> SourceEnumerator::enumerateScreens()
-{
-    QList<ScreenInfo> screensInfo;
-    const QList<QScreen*> screens = QGuiApplication::screens();
-    for (int i = 0; i < screens.size(); ++i) {
-        QScreen* screen = screens.at(i);
-        if (!screen) {
-            continue;
-        }
-
-        ScreenInfo info;
-        info.index = i;
-        info.name = QStringLiteral("屏幕 %1").arg(i + 1);
-        if (i == 0) {
-            info.name += QStringLiteral(" (主屏)");
-        }
-        info.resolution = screen->size();
-        info.geometry = screen->geometry();
-        screensInfo.append(info);
-    }
-    return screensInfo;
-}
 
 QList<WindowInfo> SourceEnumerator::enumerateWindows()
 {

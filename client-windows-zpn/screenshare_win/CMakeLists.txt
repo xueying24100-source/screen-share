@@ -48,9 +48,6 @@ qt_add_executable(qtproject_screenshare
     # Current UI keeps v5 behavior, while this layer is ready for WGC/DXGI integration.
     src/capture/sourceenumerator.h src/capture/sourceenumerator.cpp
     src/capture/screencapturer.h src/capture/screencapturer.cpp
-
-    # Platform layer - Windows Graphics Capture backend
-    src/platform/windows/wgc/wgcwindowcapturebackend.h src/platform/windows/wgc/wgcwindowcapturebackend.cpp
 )
 
 target_include_directories(qtproject_screenshare PRIVATE
@@ -60,7 +57,6 @@ target_include_directories(qtproject_screenshare PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network
     ${CMAKE_CURRENT_SOURCE_DIR}/src/capture
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/wgc
 )
 
 # Translation resource generation is disabled for the classroom demo.

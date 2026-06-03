@@ -1,72 +1,5 @@
 #include "mainwindow_impl_includes.h"
 
-namespace {
-#ifdef Q_OS_WIN
-struct EnumWindowContext
-{
-    QList<MainWindow::WindowItem> *items = nullptr;
-};
-
-BOOL CALLBACK enumCapturableWindows(HWND hwnd, LPARAM lParam)
-{
-    auto *ctx = reinterpret_cast<EnumWindowContext*>(lParam);
-    if (!ctx || !ctx->items) {
-        return TRUE;
-    }
-
-    if (!IsWindowVisible(hwnd)) {
-        return TRUE;
-    }
-
-    // 过滤掉工具窗口、无标题窗口、子窗口，尽量接近任务栏里能看到的窗口。
-    if (GetAncestor(hwnd, GA_ROOT) != hwnd) {
-        return TRUE;
-    }
-
-    const LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    if (exStyle & WS_EX_TOOLWINDOW) {
-        return TRUE;
-    }
-
-    const int titleLen = GetWindowTextLengthW(hwnd);
-    if (titleLen <= 0) {
-        return TRUE;
-    }
-
-    wchar_t titleBuffer[512] = {0};
-    GetWindowTextW(hwnd, titleBuffer, 511);
-    QString title = QString::fromWCharArray(titleBuffer).trimmed();
-    if (title.isEmpty()) {
-        return TRUE;
-    }
-
-    // 排除一些系统外壳窗口，避免列表太乱。
-    if (title == QStringLiteral("Program Manager") ||
-        title == QStringLiteral("Windows 输入体验") ||
-        title == QStringLiteral("Windows Input Experience")) {
-        return TRUE;
-    }
-
-    RECT rect{};
-    GetWindowRect(hwnd, &rect);
-    const int width = rect.right - rect.left;
-    const int height = rect.bottom - rect.top;
-    const bool minimized = IsIconic(hwnd);
-    if (!minimized && (width < 120 || height < 80)) {
-        return TRUE;
-    }
-
-    MainWindow::WindowItem item;
-    item.handle = reinterpret_cast<quintptr>(hwnd);
-    item.title = title;
-    item.minimized = minimized;
-    ctx->items->append(item);
-
-    return TRUE;
-}
-#endif
-}
-
 void MainWindow::createSharePopup()
 {
     sharePopup = new QFrame(ui->centralwidget);
@@ -224,7 +157,7 @@ void MainWindow::refreshSharePopupOptions()
         return;
     }
 
-    const QList<QScreen*> screens = QGuiApplication::screens();
+    const QList<QScreen*> screens = ScreenCapturer::screens();
     if (btnDesktop1) {
         btnDesktop1->setIcon(makeScreenThumbnailIcon(0));
         btnDesktop1->setIconSize(QSize(132, 74));
@@ -249,10 +182,10 @@ void MainWindow::refreshSharePopupOptions()
 
     clearWindowButtons();
 
-    QList<WindowItem> windows = listOpenWindows();
+    const QList<WindowInfo> windows = SourceEnumerator::enumerateWindows();
     const int maxWindowButtons = 6;
     int count = 0;
-    for (const WindowItem &item : windows) {
+    for (const WindowInfo &item : windows) {
         if (count >= maxWindowButtons) {
             break;
         }
@@ -309,22 +242,6 @@ void MainWindow::clearWindowButtons()
     windowSourceButtons.clear();
 }
 
-QList<MainWindow::WindowItem> MainWindow::listOpenWindows() const
-{
-    QList<WindowItem> items;
-
-#ifdef Q_OS_WIN
-    EnumWindowContext ctx;
-    ctx.items = &items;
-    EnumWindows(enumCapturableWindows, reinterpret_cast<LPARAM>(&ctx));
-#else
-    // Qt 本身没有跨平台枚举所有外部应用窗口的接口。
-    // Windows 版本用 Win32 EnumWindows 实现，其他平台这里先返回空列表。
-#endif
-
-    return items;
-}
-
 QString MainWindow::shortWindowTitle(const QString &title, int maxLen) const
 {
     QString t = title.simplified();
@@ -367,9 +284,12 @@ QIcon MainWindow::makeScreenThumbnailIcon(int screenIndex) const
     canvas.fill(Qt::transparent);
 
     QPixmap desktopPixmap;
-    const QList<QScreen*> screens = QGuiApplication::screens();
-    if (screenIndex >= 0 && screenIndex < screens.size() && screens.at(screenIndex)) {
-        desktopPixmap = screens.at(screenIndex)->grabWindow(0);
+    const QList<QScreen*> screens = ScreenCapturer::screens();
+    if (screenIndex >= 0 && screenIndex < screens.size()) {
+        QImage screenImage = ScreenCapturer::captureScreenOnce(screenIndex, iconSize);
+        if (!screenImage.isNull()) {
+            desktopPixmap = QPixmap::fromImage(screenImage);
+        }
     }
 
     QPainter painter(&canvas);
@@ -449,54 +369,10 @@ QIcon MainWindow::makeWindowThumbnailIcon(quintptr windowHandle, bool minimized)
 
     QPixmap windowPixmap;
     if (!minimized && windowHandle != 0) {
-#ifdef Q_OS_WIN
-        HWND hwnd = reinterpret_cast<HWND>(windowHandle);
-        if (IsWindow(hwnd)) {
-            RECT rect{};
-            if (GetWindowRect(hwnd, &rect)) {
-                const int width = rect.right - rect.left;
-                const int height = rect.bottom - rect.top;
-                if (width > 0 && height > 0) {
-#ifndef PW_RENDERFULLCONTENT
-#define PW_RENDERFULLCONTENT 0x00000002
-#endif
-                    QImage image(width, height, QImage::Format_RGB32);
-                    image.fill(Qt::black);
-                    HDC screenDc = GetDC(nullptr);
-                    HDC memDc = screenDc ? CreateCompatibleDC(screenDc) : nullptr;
-                    HBITMAP bitmap = (screenDc && memDc) ? CreateCompatibleBitmap(screenDc, width, height) : nullptr;
-                    HGDIOBJ oldBitmap = nullptr;
-                    bool captured = false;
-                    if (bitmap) {
-                        oldBitmap = SelectObject(memDc, bitmap);
-                        captured = PrintWindow(hwnd, memDc, PW_RENDERFULLCONTENT);
-                        if (captured) {
-                            BITMAPINFO bmi{};
-                            bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                            bmi.bmiHeader.biWidth = width;
-                            bmi.bmiHeader.biHeight = -height;
-                            bmi.bmiHeader.biPlanes = 1;
-                            bmi.bmiHeader.biBitCount = 32;
-                            bmi.bmiHeader.biCompression = BI_RGB;
-                            captured = GetDIBits(memDc, bitmap, 0, height, image.bits(), &bmi, DIB_RGB_COLORS) != 0;
-                        }
-                    }
-                    if (oldBitmap) SelectObject(memDc, oldBitmap);
-                    if (bitmap) DeleteObject(bitmap);
-                    if (memDc) DeleteDC(memDc);
-                    if (screenDc) ReleaseDC(nullptr, screenDc);
-                    if (captured) {
-                        windowPixmap = QPixmap::fromImage(image);
-                    }
-                }
-            }
+        QImage windowImage = ScreenCapturer::captureWindowOnce(windowHandle, iconSize);
+        if (!windowImage.isNull() && !ScreenCapturer::imageLooksMostlyBlack(windowImage)) {
+            windowPixmap = QPixmap::fromImage(windowImage);
         }
-#else
-        QScreen *screen = QGuiApplication::primaryScreen();
-        if (screen) {
-            windowPixmap = screen->grabWindow(static_cast<WId>(windowHandle));
-        }
-#endif
     }
 
     QPainter painter(&canvas);

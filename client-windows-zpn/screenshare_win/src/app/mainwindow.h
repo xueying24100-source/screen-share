@@ -44,12 +44,6 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    struct WindowItem {
-        quintptr handle = 0;
-        QString title;
-        bool minimized = false;
-    };
-
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -89,7 +83,6 @@ private:
     void createSharePopup();
     void refreshSharePopupOptions();
     void clearWindowButtons();
-    QList<WindowItem> listOpenWindows() const;
     void centerSharePopup();
 
     void startShareScreen(int screenIndex);
