@@ -103,7 +103,7 @@ struct AnnotationCommand {
 
 ## 当前 demo 已覆盖的内容
 
-`src/demo/main.cpp` 现在已经直接使用这套协议做本地标注验证：
+合并后的客户端已经在 `widgets/ScreenView.cpp` 中使用本地 overlay 做标注验证：
 
 - `Pen`
 - `Rectangle`

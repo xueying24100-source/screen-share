@@ -7,7 +7,8 @@
 - `include/screen_share/AnnotationTypes.h`
 - `include/screen_share/ScreenCaptureManager.h`
 - `src/macos/ScreenCaptureManager.mm`
-- `src/demo/main.cpp`
+- `pages/RoomPage.cpp`
+- `widgets/ScreenView.cpp`
 - `docs/`
 
 ## 目标
@@ -128,13 +129,13 @@ void captureError(quint32 sourceId,
 
 - [QT_CLIENT_USAGE_EXAMPLE.md](./QT_CLIENT_USAGE_EXAMPLE.md)
 
-## 当前 Demo
+## 当前客户端接入
 
-`main.cpp` 现在只做两件事：
+合并后的客户端已经在 `RoomPage` 和 `ScreenView` 中接入 macOS 采集模块：
 
-- 验证枚举结果是否正确
-- 展示交付给前端的实际字段
-- 对当前来源做一轮基础接口校验
-- 直接验证 include-self / 分辨率 / 音频 / 权限状态 这些交付前最容易踩坑的配置
+- `RoomPage` 点击共享后弹出屏幕/窗口来源选择。
+- 用户确认后调用 `startCapture(id, type)` 启动本机采集预览。
+- `frameCaptured(...)` 回调中的 `QImage` 会传给 `ScreenView::updateFrame(...)`。
+- 停止共享时调用 `stopAllCaptures()` 并清空 `ScreenView` 画面。
 
-它不再承担“完整屏幕共享预览客户端”的职责。
+旧的 qmake demo 已从合并后的客户端分支移除，当前以 CMake 客户端工程为主。

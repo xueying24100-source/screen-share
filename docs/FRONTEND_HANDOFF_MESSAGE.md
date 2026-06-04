@@ -7,7 +7,8 @@
 - 画笔/标注协议：`include/screen_share/AnnotationTypes.h`
 - 头文件：`include/screen_share/ScreenCaptureManager.h`
 - 实现：`src/macos/ScreenCaptureManager.mm`
-- 枚举验证 Demo：`src/demo/main.cpp`
+- 客户端接入：`pages/RoomPage.cpp`
+- 画面渲染与本地标注：`widgets/ScreenView.cpp`
 - 接口说明：`docs/MACOS_SOURCE_INTERFACE.md`
 - Qt 接入示例：`docs/QT_CLIENT_USAGE_EXAMPLE.md`
 - 标注协议说明：`docs/ANNOTATION_PROTOCOL.md`

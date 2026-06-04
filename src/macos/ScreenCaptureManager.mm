@@ -1,11 +1,20 @@
-#import "screen_share/ScreenCaptureManager.h"
-#import <AudioToolbox/AudioToolbox.h>
-#import <CoreGraphics/CoreGraphics.h>
-#import <CoreMedia/CoreMedia.h>
-#import <CoreVideo/CoreVideo.h>
-#import <ScreenCaptureKit/ScreenCaptureKit.h>
+// 1. 调用 SCShareableContent 获取系统可共享来源
+// 2. 把 SCDisplay / SCWindow 转成 ScreenCaptureSourceInfo
+// 3. 前端选择 id + type
+// 4. startCapture 创建 SCContentFilter 和 SCStream
+// 5. ScreenCaptureKit 持续输出 CMSampleBuffer
+// 6. 视频转成 QImage，通过 frameCaptured 发给 Qt
+// 7. 音频转成 QByteArray，通过 audioDataCaptured 发给 Qt
+// 8. stopCapture 停止流并释放资源
 
-#include <QCoreApplication>
+#import "screen_share/ScreenCaptureManager.h"
+#import <AudioToolbox/AudioToolbox.h>//处理音频数据
+#import <CoreGraphics/CoreGraphics.h>//获取显示器信息
+#import <CoreMedia/CoreMedia.h>//处理视频帧和音频数据
+#import <CoreVideo/CoreVideo.h>//处理视频帧数据
+#import <ScreenCaptureKit/ScreenCaptureKit.h>//使用ScreenCaptureKit进行屏幕捕获
+
+#include <QCoreApplication>//获取当前进程ID
 #include <QDebug>
 #include <QHash>
 #include <QMetaObject>
@@ -13,38 +22,43 @@
 #include <QtGlobal>
 #include <algorithm>
 
+//定义捕获上下文结构体，用于存储屏幕捕获会话的相关信息
 struct CaptureContext {
-    quint32 sourceId = 0;
-    ScreenCaptureSourceInfo::SourceType sourceType = ScreenCaptureSourceInfo::SourceType::Display;
-    SCStream *stream = nil;
-    id outputBridge = nil;
-    bool audioOutputAdded = false;
+    quint32 sourceId = 0;//qt的quint32类型用于存储源ID
+    ScreenCaptureSourceInfo::SourceType sourceType = ScreenCaptureSourceInfo::SourceType::Display;//源类型，默认为显示器
+    SCStream *stream = nil;//ScreenCaptureKit的流对象，用于管理屏幕捕获会话
+    id outputBridge = nil;//桥接对象，负责将ScreenCaptureKit的回调转换为Qt信号
+    bool audioOutputAdded = false;//标志，指示是否已添加音频输出到流中
 };
 
 class ScreenCaptureManager::Impl {
 public:
-    QHash<quint64, CaptureContext *> contexts;
-    QHash<quint32, SCDisplay *> displays;
-    QHash<quint32, SCWindow *> windows;
-    SCShareableContent *shareableContent = nil;
-    SCRunningApplication *currentApplication = nil;
-    bool includeCurrentApplicationContent = false;
-    CaptureResolutionPreset resolutionPreset = CaptureResolutionPreset::Native;
-    bool capturesAudio = false;
-    dispatch_queue_t sampleQueue =
-        dispatch_queue_create("com.yuzhuo.screen-share.sample-queue", DISPATCH_QUEUE_SERIAL);
+    QHash<quint64, CaptureContext *> contexts;//当前正在采集的所有来源
+    QHash<quint32, SCDisplay *> displays;//缓存的屏幕对象
+    QHash<quint32, SCWindow *> windows;//缓存的窗口对象
+    SCShareableContent *shareableContent = nil;//当前可共享内容的快照
+    SCRunningApplication *currentApplication = nil;//当前运行的应用程序对象
+    bool includeCurrentApplicationContent = false;//标志，指示是否在捕获中包含当前应用程序的内容
+    CaptureResolutionPreset resolutionPreset = CaptureResolutionPreset::Native;//捕获分辨率预设，默认为原生分辨率
+    bool capturesAudio = false;//标志，指示是否捕获音频
+    dispatch_queue_t sampleQueue = //ScreenCaptureKit 输出视频/音频 sample 的队列
+        dispatch_queue_create("com.yuzhuo.screen-share.sample-queue", DISPATCH_QUEUE_SERIAL);//ScreenCaptureKit 输出视频/音频 sample 的队列
 };
 
+//生成采集 64位key
 static quint64 captureKey(quint32 sourceId, ScreenCaptureSourceInfo::SourceType sourceType) {
     return (static_cast<quint64>(static_cast<int>(sourceType)) << 32) | sourceId;
 }
 
+//把 macOS 视频帧转成 QImage
+//ScreenCaptureKit 给出来的视频帧是 CVPixelBufferRef，Qt 前端更适合用 QImage，所以需要转换
 static QImage qImageFromPixelBuffer(CVPixelBufferRef pixelBuffer) {
     if (!pixelBuffer) {
         return QImage();
     }
 
-    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);//锁住 pixel buffer，保证读取期间内存稳定
+    //获取像素内存地址、宽、高、每行字节数、像素格式
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
     const int width = static_cast<int>(CVPixelBufferGetWidth(pixelBuffer));
     const int height = static_cast<int>(CVPixelBufferGetHeight(pixelBuffer));
@@ -52,7 +66,9 @@ static QImage qImageFromPixelBuffer(CVPixelBufferRef pixelBuffer) {
     const OSType pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer);
 
     QImage frame;
+    //如果格式是 kCVPixelFormatType_32BGRA，就构造 QImage,否则创建一个黑色的空白图像
     if (baseAddress && pixelFormat == kCVPixelFormatType_32BGRA) {
+        //调用 .copy() 复制一份数据
         frame = QImage(static_cast<uchar *>(baseAddress),
                        width,
                        height,
@@ -64,10 +80,12 @@ static QImage qImageFromPixelBuffer(CVPixelBufferRef pixelBuffer) {
         frame.fill(Qt::black);
     }
 
+    //解锁 pixel buffer，允许其他线程访问内存
     CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     return frame;
 }
 
+//根据原始来源尺寸和分辨率预设，计算最终采集输出分辨率
 static QSize resolvedOutputSize(const QSize &sourceSize, CaptureResolutionPreset preset) {
     if (!sourceSize.isValid()) {
         return QSize(1, 1);
@@ -88,15 +106,17 @@ static QSize resolvedOutputSize(const QSize &sourceSize, CaptureResolutionPreset
     return sourceSize;
 }
 
+//获取显示器的像素尺寸
 static QSize displayPixelSize(SCDisplay *display) {
     if (!display) {
         return QSize();
     }
 
-    return QSize(static_cast<int>(CGDisplayPixelsWide(display.displayID)),
+    return QSize(static_cast<int>(CGDisplayPixelsWide(display.displayID)),//获取显示器像素宽度
                  static_cast<int>(CGDisplayPixelsHigh(display.displayID)));
 }
 
+//获取窗口的尺寸
 static QSize windowLogicalSize(SCWindow *window) {
     if (!window) {
         return QSize();
@@ -110,6 +130,7 @@ static QSize windowLogicalSize(SCWindow *window) {
                      static_cast<NSInteger>(std::lround(window.frame.size.height)))));
 }
 
+//判断视频帧是否完整
 static bool isFrameSampleComplete(CMSampleBufferRef sampleBuffer) {
     if (!sampleBuffer) {
         return false;
@@ -137,6 +158,7 @@ static bool isFrameSampleComplete(CMSampleBufferRef sampleBuffer) {
     return status == SCFrameStatusComplete || status == SCFrameStatusStarted;
 }
 
+//从音频样本缓冲区中提取音频数据
 static QByteArray audioDataFromSampleBuffer(CMSampleBufferRef sampleBuffer) {
     if (!sampleBuffer) {
         return {};
@@ -177,6 +199,7 @@ static QByteArray audioDataFromSampleBuffer(CMSampleBufferRef sampleBuffer) {
     return audioData;
 }
 
+//根据 SCDisplay 对象构造 ScreenCaptureSourceInfo 结构体,把系统对象转成前端容易使用的数据结构
 static ScreenCaptureSourceInfo makeDisplayInfo(SCDisplay *display) {
     ScreenCaptureSourceInfo info;
     info.id = static_cast<quint32>(display.displayID);
@@ -189,6 +212,8 @@ static ScreenCaptureSourceInfo makeDisplayInfo(SCDisplay *display) {
     return info;
 }
 
+//根据 SCWindow 对象构造 ScreenCaptureSourceInfo 结构体,把系统对象转成前端容易使用的数据结构
+//底层兼容窗口来源，方便统一接口和联调
 static bool makeWindowInfo(SCWindow *window,
                            pid_t currentPid,
                            bool includeCurrentApplicationContent,
@@ -227,21 +252,27 @@ static bool makeWindowInfo(SCWindow *window,
     return true;
 }
 
+//同步获取系统可共享内容的快照，底层调用了 ScreenCaptureKit 的异步接口，但通过信号量实现了同步等待，方便上层逻辑编写
 static SCShareableContent *copyShareableContentSync(NSError **outError) {
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    __block SCShareableContent *capturedContent = nil;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);//信号量，用于同步等待
+    //__block 表示这个变量可以在 Objective-C block 回调内部被修改。
+    __block SCShareableContent *capturedContent = nil;//保存异步回调返回的可共享内容
     __block NSError *capturedError = nil;
 
+    //Objective-C 的方法调用
+    //向 ScreenCaptureKit 请求当前可共享内容，等系统完成后执行 completionHandler 里的 block
     [SCShareableContent getShareableContentExcludingDesktopWindows:YES
                                                onScreenWindowsOnly:YES
                                                  completionHandler:^(SCShareableContent * _Nullable shareableContent,
                                                                      NSError * _Nullable error) {
         capturedContent = [shareableContent retain];
         capturedError = [error retain];
-        dispatch_semaphore_signal(semaphore);
+        dispatch_semaphore_signal(semaphore);//signal 信号量，通知等待的线程可以继续执行了
     }];
 
+    //wait 等待 semaphore 有信号。
     dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+
     if (outError) {
         *outError = capturedError;
     } else if (capturedError) {
@@ -250,18 +281,21 @@ static SCShareableContent *copyShareableContentSync(NSError **outError) {
     return capturedContent;
 }
 
+//ScreenCaptureKit 的回调桥接类，负责将 SCStreamDelegate 和 SCStreamOutput 的回调转换为 Qt 信号，方便上层逻辑处理
 @interface ScreenCaptureStreamBridge : NSObject <SCStreamDelegate, SCStreamOutput>
 - (instancetype)initWithManager:(ScreenCaptureManager *)manager
                        sourceId:(quint32)sourceId
                      sourceType:(ScreenCaptureSourceInfo::SourceType)sourceType;
 @end
 
+//实现 ScreenCaptureStreamBridge 类，处理屏幕捕获的回调事件
 @implementation ScreenCaptureStreamBridge {
     ScreenCaptureManager *_manager;
     quint32 _sourceId;
     ScreenCaptureSourceInfo::SourceType _sourceType;
 }
 
+//初始化方法，保存管理器引用、源ID和源类型，方便后续回调中使用
 - (instancetype)initWithManager:(ScreenCaptureManager *)manager
                        sourceId:(quint32)sourceId
                      sourceType:(ScreenCaptureSourceInfo::SourceType)sourceType {
@@ -274,6 +308,7 @@ static SCShareableContent *copyShareableContentSync(NSError **outError) {
     return self;
 }
 
+//接收视频/音频数据
 - (void)stream:(SCStream *)stream
 didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
        ofType:(SCStreamOutputType)type {
@@ -335,6 +370,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     }
 }
 
+//采集异常停止
 - (void)stream:(SCStream *)stream didStopWithError:(NSError *)error {
     Q_UNUSED(stream);
     ScreenCaptureManager *manager = _manager;
@@ -394,6 +430,7 @@ bool ScreenCaptureManager::capturesAudio() const {
 
 bool ScreenCaptureManager::refreshShareableContent(QString *errorMessage) {
     NSError *error = nil;
+    //同步获取共享内容，如果失败了就返回错误信息并退出函数
     SCShareableContent *content = copyShareableContentSync(&error);
     if (!content) {
         if (errorMessage) {
@@ -407,6 +444,7 @@ bool ScreenCaptureManager::refreshShareableContent(QString *errorMessage) {
         return false;
     }
 
+    //判断之前是否已经缓存过旧的 shareableContent
     if (d->shareableContent) {
         [d->shareableContent release];
     }
@@ -415,18 +453,20 @@ bool ScreenCaptureManager::refreshShareableContent(QString *errorMessage) {
     d->windows.clear();
     d->currentApplication = nil;
 
+    //遍历 content.displays 里的每个 SCDisplay。SCDisplay 表示一个可共享屏幕
     for (SCDisplay *display in content.displays) {
         d->displays.insert(static_cast<quint32>(display.displayID), display);
     }
 
-    const pid_t currentPid = QCoreApplication::applicationPid();
+    const pid_t currentPid = QCoreApplication::applicationPid();//获取当前 Qt 应用进程的 pid，用于判断哪个 SCRunningApplication 是当前 app
+    //遍历系统返回的所有相关应用
     for (SCRunningApplication *application in content.applications) {
         if (application.processID == currentPid) {
             d->currentApplication = application;
             break;
         }
     }
-
+    //遍历系统返回的窗口列表
     for (SCWindow *window in content.windows) {
         ScreenCaptureSourceInfo info;
         if (makeWindowInfo(window, currentPid, d->includeCurrentApplicationContent, &info)) {
@@ -440,9 +480,12 @@ bool ScreenCaptureManager::refreshShareableContent(QString *errorMessage) {
     return true;
 }
 
+//核心接口：枚举屏幕来源
 QVector<ScreenCaptureSourceInfo> ScreenCaptureManager::enumerateDisplays() {
     QVector<ScreenCaptureSourceInfo> displays;
     QString errorMessage;
+
+    //枚举屏幕来源，需要刷新共享内容，如果失败了就发出错误信号并返回空列表
     if (!refreshShareableContent(&errorMessage)) {
         emit captureError(0,
                           ScreenCaptureSourceInfo::SourceType::Display,
@@ -452,20 +495,23 @@ QVector<ScreenCaptureSourceInfo> ScreenCaptureManager::enumerateDisplays() {
         return displays;
     }
 
+    //
     for (SCDisplay *display in d->shareableContent.displays) {
         displays.append(makeDisplayInfo(display));
     }
 
+    //按照 id 从小到大排列屏幕
     std::sort(displays.begin(),
               displays.end(),
               [](const ScreenCaptureSourceInfo &lhs, const ScreenCaptureSourceInfo &rhs) {
         return lhs.id < rhs.id;
     });
 
-    emit displaysEnumerated(displays);
+    emit displaysEnumerated(displays);//发出 Qt 信号 displaysEnumerated。表示屏幕枚举完成了，这是枚举结果。
     return displays;
 }
 
+//核心接口：枚举窗口来源
 QVector<ScreenCaptureSourceInfo> ScreenCaptureManager::enumerateWindows() {
     QVector<ScreenCaptureSourceInfo> windows;
     QString errorMessage;
@@ -500,6 +546,7 @@ QVector<ScreenCaptureSourceInfo> ScreenCaptureManager::enumerateWindows() {
     return windows;
 }
 
+//核心接口：启动采集
 bool ScreenCaptureManager::startCapture(quint32 sourceId,
                                         ScreenCaptureSourceInfo::SourceType sourceType) {
     const quint64 key = captureKey(sourceId, sourceType);
@@ -508,7 +555,10 @@ bool ScreenCaptureManager::startCapture(quint32 sourceId,
     }
 
     QString errorMessage;
+    //刷新共享内容，如果失败了就发出错误信号并返回 false
     if (!refreshShareableContent(&errorMessage)) {
+        //emit 是 Qt 的信号发送关键字，作用是发出一个Qt signal，通知外部：这里发生了某个事件
+        //发出错误信号，表示刷新共享内容失败了
         emit captureError(sourceId,
                           sourceType,
                           errorMessage.isEmpty()
@@ -517,65 +567,75 @@ bool ScreenCaptureManager::startCapture(quint32 sourceId,
         return false;
     }
 
-    SCContentFilter *filter = nil;
-    QSize outputSize;
+    //SCContentFilter 是 ScreenCaptureKit 的采集目标过滤器，用来指定采集哪个屏幕或窗口，以及排除哪些应用/窗口。它负责“采集什么”
+    //SCStreamConfiguration 负责“怎么采集”
+    //SCStream 负责“真正开始采集”。
+    SCContentFilter *filter = nil;//采集过滤器：要采集哪个屏幕或哪个窗口，以及要不要排除某些应用
+    QSize outputSize;//输出分辨率：根据源的尺寸和用户选择的预设计算出来的最终采集分辨率
 
-    if (sourceType == ScreenCaptureSourceInfo::SourceType::Display) {
-        SCDisplay *display = d->displays.value(sourceId, nil);
-        if (!display) {
+    if (sourceType == ScreenCaptureSourceInfo::SourceType::Display) {//如果是屏幕来源，就创建一个针对屏幕的过滤器
+        SCDisplay *display = d->displays.value(sourceId, nil);//根据屏幕 id 查找对应的 SCDisplay *对象
+        if (!display) {//如果找不到对应的屏幕对象，说明用户选的屏幕不存在了，就发出错误信号并返回 false
             emit captureError(sourceId, sourceType, QStringLiteral("Selected display no longer exists"));
             return false;
         }
 
-        NSArray<SCRunningApplication *> *excludedApps =
-            (!d->includeCurrentApplicationContent && d->currentApplication)
+        //要排除的应用列表 = 当前 app
+        NSArray<SCRunningApplication *> *excludedApps = //定义一个数组，里面存放要从屏幕采集中排除的应用
+            (!d->includeCurrentApplicationContent //不包含当前应用内容
+            && d->currentApplication) //d->currentApplication 是当前 app 对应的 SCRunningApplication *。
+                                    //是在 refreshShareableContent() 里通过当前进程 pid 找出来的
+                                    //如果不是空，说明已经知道当前 app 是哪个系统应用对象
             ? @[ d->currentApplication ]
             : @[];
+        //[SCContentFilter alloc]创建一块内存，然后[]初始化
         filter = [[SCContentFilter alloc] initWithDisplay:display
-                                    excludingApplications:excludedApps
-                                         exceptingWindows:@[]];
-        outputSize = resolvedOutputSize(displayPixelSize(display), d->resolutionPreset);
-    } else {
+                                    excludingApplications:excludedApps//排除当前应用，防止递归
+                                         exceptingWindows:@[]];//排除的窗口列表，这里不排除任何窗口
+        outputSize = resolvedOutputSize(displayPixelSize(display), d->resolutionPreset);//根据屏幕的像素尺寸和用户选择的预设计算输出分辨率
+    } else {//如果是窗口来源，就创建一个针对窗口的过滤器
         SCWindow *window = d->windows.value(sourceId, nil);
         if (!window) {
             emit captureError(sourceId, sourceType, QStringLiteral("Selected window no longer exists"));
             return false;
         }
 
-        filter = [[SCContentFilter alloc] initWithDesktopIndependentWindow:window];
+        filter = [[SCContentFilter alloc] initWithDesktopIndependentWindow:window];//初始化一个针对窗口的采集过滤器
         outputSize = resolvedOutputSize(windowLogicalSize(window), d->resolutionPreset);
     }
 
     if (!filter || !outputSize.isValid()) {
         if (filter) {
-            [filter release];
+            [filter release];//释放当前代码对 filter 这个对象的持有权
         }
         emit captureError(sourceId, sourceType, QStringLiteral("Invalid content filter or output size"));
         return false;
     }
 
+    //SCStreamConfiguration 是 ScreenCaptureKit 里的采集配置类
     SCStreamConfiguration *configuration = [[SCStreamConfiguration alloc] init];
     configuration.width = static_cast<size_t>(outputSize.width());
     configuration.height = static_cast<size_t>(outputSize.height());
-    configuration.minimumFrameInterval = CMTimeMake(1, 30);
-    configuration.queueDepth = 3;
-    configuration.pixelFormat = kCVPixelFormatType_32BGRA;
-    configuration.showsCursor = YES;
-    configuration.scalesToFit = YES;
+    configuration.minimumFrameInterval = CMTimeMake(1, 30);//设置最小帧间隔，30fps
+    configuration.queueDepth = 3;//系统最多缓存 3 帧还没处理的视频帧
+    configuration.pixelFormat = kCVPixelFormatType_32BGRA;//设置输出视频帧的像素格式，Qt 前端更适合处理 BGRA 格式的帧
+    configuration.showsCursor = YES;//设置是否在捕获的视频帧中显示鼠标光标
+    configuration.scalesToFit = YES;//设置是否缩放捕获内容以适应输出分辨率
     if (d->capturesAudio) {
         configuration.capturesAudio = YES;
-        configuration.sampleRate = 48000;
-        configuration.channelCount = 2;
-        configuration.excludesCurrentProcessAudio = !d->includeCurrentApplicationContent;
+        configuration.sampleRate = 48000;//音频采样率，48000Hz
+        configuration.channelCount = 2;//双声道
+        configuration.excludesCurrentProcessAudio = !d->includeCurrentApplicationContent;//是否排除当前应用的音频
     }
 
+    //ScreenCaptureStreamBridge 是 ScreenCaptureKit 采集结果的接收者，负责把采集结果转换成 Qt 前端能处理的格式
     ScreenCaptureStreamBridge *bridge =
         [[ScreenCaptureStreamBridge alloc] initWithManager:this
                                                   sourceId:sourceId
                                                 sourceType:sourceType];
     SCStream *stream = [[SCStream alloc] initWithFilter:filter
                                           configuration:configuration
-                                               delegate:bridge];
+                                               delegate:bridge];//初始化一个采集流，并把 ScreenCaptureStreamBridge 作为它的代理
     [configuration release];
     [filter release];
 
@@ -585,10 +645,12 @@ bool ScreenCaptureManager::startCapture(quint32 sourceId,
         return false;
     }
 
-    NSError *addOutputError = nil;
-    if (![stream addStreamOutput:bridge
-                            type:SCStreamOutputTypeScreen
-              sampleHandlerQueue:d->sampleQueue
+    //把ScreenCaptureStreamBridge 注册为 SCStream 的视频帧输出接收者
+    //后续系统采集到的屏幕帧会通过 didOutputSampleBuffer 回调到这个 bridge
+    NSError *addOutputError = nil; //接收添加采集输出时可能出现的错误信息
+    if (![stream addStreamOutput:bridge//添加一个采集输出，这里用的是 ScreenCaptureStreamBridge 作为输出的接收者
+                            type:SCStreamOutputTypeScreen//输出类型是视频帧
+              sampleHandlerQueue:d->sampleQueue//指定输出回调在哪个队列执行
                            error:&addOutputError]) {
         const QString message = addOutputError
             ? QString::fromNSString(addOutputError.localizedDescription)
@@ -655,6 +717,7 @@ bool ScreenCaptureManager::startCapture(quint32 sourceId,
     return true;
 }
 
+//核心接口：停止采集
 void ScreenCaptureManager::stopCapture(quint32 sourceId,
                                        ScreenCaptureSourceInfo::SourceType sourceType) {
     const quint64 key = captureKey(sourceId, sourceType);

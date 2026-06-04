@@ -15,23 +15,26 @@ struct ScreenCaptureSourceInfo {
         Window = 1
     };
 
+    //启动采集靠id+type确定来源
     quint32 id = 0;
     SourceType type = SourceType::Display;
     QString name;
     QSize size;
-    float scale = 1.0f;
+    float scale = 1.0f;//缩放比例
 };
 
 Q_DECLARE_METATYPE(ScreenCaptureSourceInfo)
 Q_DECLARE_METATYPE(QVector<ScreenCaptureSourceInfo>)
 
+//预设分辨率
 enum class CaptureResolutionPreset {
-    Native = 0,
-    Half,
-    HD720,
-    HD1080
+    Native = 0,//原始分辨率
+    Half,//原始分辨率的一半
+    HD720,//HD720p，1280x720
+    HD1080//HD1080p，1920x1080
 };
 
+//设计方式：PImpl，可以把具体实现藏起来
 class ScreenCaptureManager : public QObject {
     Q_OBJECT
 public:

@@ -1,13 +1,34 @@
-# macOS / Finder
-.DS_Store
-
-# qmake / Qt build artifacts
-.qmake.stash
-Makefile
-moc_*.cpp
-*.o
-*.app/
-
-# Optional local build directories
+# Build artifacts
 build/
 out/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.o
+*.obj
+*.exe
+*.dll
+*.dylib
+*.app/
+*.app
+*.dmg
+
+# Qt generated files
+.qmake.stash
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*.ts.auto
+*.pro.user
+*.user
+
+# IDE files
+.vscode/
+.idea/
+.qtcreator/
+CMakeLists.txt.user
+
+# System files
+.DS_Store
+Thumbs.db
