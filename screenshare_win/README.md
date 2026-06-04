@@ -1,712 +1,478 @@
+多人屏幕共享会议系统
+1. 项目概述
+本项目是一个基于 Qt/C++ 的多人会议原型系统，目标是实现类似飞书会议的核心能力，包括桌面共享、窗口共享、白板共享、画笔批注、摄像头小窗、系统声音/麦克风采集，以及多实例之间的实时通信。
+
+系统采用 Host 中心转发架构：一个实例创建会议并作为 Host，其他实例通过会议码加入。Host 负责会议码校验、用户身份分配、参会者状态广播和媒体数据转发。每个参会者拥有独立的用户标识，接收端根据 senderId 将不同用户的摄像头画面显示到对应的小窗口中，并将共享屏幕显示到主窗口区域。
+
+项目当前定位为多人会议 Demo / 原型系统，重点验证以下技术链路：
+
+多人会议连接管理
+摄像头采集与小窗显示
+屏幕、窗口、白板共享
+画笔批注与共享画面合成
+视频编码、解码与实时传输
+Host 多客户端媒体转发
+动态参会者窗口管理
+音频采集、混音与传输接口
+2. 核心功能
+2.1 会议创建与加入
+系统支持通过会议码完成会议加入流程。
+
+创建会议后，Host 生成会议码并监听会议端口。
+Client 加入会议时需要输入会议码。
+Host 校验会议码，校验成功后为 Client 分配用户 ID。
+会议成员加入或离开时，Host 会广播状态变化，所有端同步更新参会者窗口。
+核心流程：
+
+Host 创建会议
+    ↓
+生成会议码
+    ↓
+QTcpServer 监听端口
+    ↓
+Client 输入会议码并连接
+    ↓
+Client 发送 Hello 消息
+    ↓
+Host 校验会议码
+    ↓
+Host 分配 userId
+    ↓
+Host 发送 Welcome 并广播 PeerJoined
+2.2 多人通信与媒体转发
+项目采用 Host 中心转发方式，而不是客户端全互连方式。
+
+        Client B
+           |
+           |
+Host / Server
+           |
+           |
+        Client C
+当某个 Client 发送摄像头画面或共享屏幕时，数据会先发送到 Host，再由 Host 转发给其他 Client。这样可以降低连接管理复杂度，使每个 Client 只需要维护一条到 Host 的连接。
+
+核心能力：
+
+Host 管理多个 Client 连接
+每个连接对应一个 ClientSession
+使用 userId 区分不同参会者
+Host 转发媒体包时保留原始 senderId
+Client 根据 senderId 将远端画面分发到对应 UI 区域
+2.3 动态参会者小窗口
+顶部参会者区域不再固定为 5 个窗口，而是根据实际参会者动态创建。
+
+用户加入时自动创建小窗口
+用户离开时自动删除小窗口
+本机摄像头显示在本机小窗口
+远端摄像头显示在对应远端用户小窗口
+摄像头关闭后，小窗口恢复为占位状态
+设计原则：
+
+主窗口大屏：显示共享屏幕、共享窗口、白板或远端共享内容
+顶部小窗口：显示本机/远端摄像头或用户占位信息
+2.4 摄像头采集与显示
+摄像头模块基于 Qt Multimedia 实现，主要使用：
+
+QCamera
+QMediaCaptureSession
+QVideoSink
+QVideoFrame
+QImage
+摄像头帧处理流程：
 
-## v8.3 更新
-
-- 底部状态区域改为单独一整行，会议码、端口和连接状态不会再被按钮挤掉。
-- 共享悬浮工具条里的“批注”统一改名为“画笔”，和底部按钮保持一致。
-- 底部按钮保持原有颜色风格，只调整了垂直布局。
-
-
-## V8.1：UI 文件同步
-
-`mainwindow.ui` 已经同步加入“创建会议 / 加入会议 / 打开摄像头”等控件。
-现在 Qt Designer 中看到的主界面与运行时主界面保持一致；代码中不再动态创建这些底部按钮，只从 `ui` 文件读取控件指针。
-
-顶部参会者区域也改为 UI 文件中的 `participantScrollArea + participantLayout`，运行时继续动态添加参会者卡片。
-
-# V7 多人会议版本说明
-
-## v8 更新：会议码加入
-
-- 点击“创建会议”后会生成 6 位会议码，并弹出小窗显示。
-- 其他窗口点击“加入会议”后，需要输入会议码才能加入。
-- 会议码错误会被主机拒绝连接。
-- 当前会议码 Demo 默认连接本机 `127.0.0.1:9000`，适合本机三开/多开测试；跨电脑使用还需要后续增加主机 IP 输入或局域网发现。
-- 摄像头打开失败提示已改成中文，方便说明本机多开时摄像头被占用的问题。
-
-
-当前包已经升级为多人会议 Demo：支持一个 exe 创建会议，多个 exe 加入会议；顶部小窗口改为动态参会者栏，连接几个人就显示几个小窗口；摄像头、共享屏幕会通过主机端进行中心转发。详细说明见 `docs/V7_MULTIPLAYER_NOTES.md`。
-
-快速测试：A 点击“创建会议”，B/C 点击“加入会议”，B/C 打开摄像头，A 开始共享桌面。
-
----
-
-# 屏幕共享会议 Demo v6 架构分层版
-
-本版本是在 v5 功能基础上吸收 `screen-share-dev-win` 的代码分块架构后整理得到的版本。
-
-保留 v5 已修复功能：
-
-- 共享选择页窗口缩略图。
-- 主窗口最大化/放大后的自适应布局。
-- 较高清画质参数：普通模式约 1920×1080、JPEG 质量 88；流畅模式约 1280×720、JPEG 质量 70。
-- 摄像头关闭后远端小窗口清空。
-- 底部按钮间距优化。
-- 本机双开 TCP 通信。
-- 摄像头只显示在顶部小窗口，不占用大共享窗口。
-
-本版本新增/吸收的结构优化：
-
-```txt
-src/
-  app/          主窗口、登录窗口、发送/接收窗口、共享悬浮工具条
-  annotation/   画笔、批注层
-  audio/        麦克风、系统声音、混音、本地播放
-  capture/      屏幕/窗口采集抽象、窗口枚举、背压接口
-  media/        摄像头、Sender、Receiver、编码/解码 Worker
-  network/      TCP 本机通信
-  platform/
-    windows/wgc/ Windows Graphics Capture 后端
-docs/           架构、采集、网络、音频、UI 等说明文档
-translations/   翻译文件，当前不参与编译
-```
-
-注意：为了避免覆盖 v5 已经验证过的 UI 和行为，本次没有直接整体替换主窗口逻辑；`src/capture` 和 `src/platform/windows/wgc` 已经作为独立模块并入工程，后续可以逐步把窗口共享采集从 `MainWindow` 迁移到 `ScreenCapturer`。
-
----
-
-# 屏幕共享会议 Demo 使用说明
-
-本项目是一个基于 **Qt 6 / Windows** 的会议共享 Demo，目标是做一个类似飞书会议的本地演示程序。当前版本已经完成第一阶段功能，并加入了本机双开通信能力，可以用两个 exe 模拟两端会议。
-
-当前主要功能包括：
-
-- 登录 / 注册。
-- 共享桌面。
-- 共享指定窗口。
-- 白板共享。
-- 画笔批注。
-- 共享音频开关。
-- 麦克风开关。
-- 摄像头打开 / 关闭。
-- 本机双开 TCP 通信。
-- A 端共享屏幕，B 端接收共享画面。
-- B 端打开摄像头，A 端接收远端摄像头画面。
-- 摄像头画面显示在顶部小窗口，不占用中间大共享窗口。
-
----
-
-## 1. 运行环境
-
-建议环境：
-
-```txt
-Windows 10 / Windows 11
-Qt 6.11.1
-Qt Creator
-MSVC2022 64-bit Kit
-CMake
-```
-
-CMake 里需要的 Qt 模块包括：
-
-```txt
-Core
-Gui
-Widgets
-Multimedia
-Network
-```
-
-注意：本项目建议使用 **MSVC2022 64-bit** 编译，不建议混用 MinGW。编译和部署时必须使用同一个 Qt Kit 对应的工具链。
-
----
-
-## 2. 编译方法
-
-1. 解压项目。
-2. 用 Qt Creator 打开项目根目录下的：
-
-```txt
-CMakeLists.txt
-```
-
-不要打开 `CMakeLists.txt.user`，这个文件是别人电脑上的本地配置。
-
-3. Kit 选择：
-
-```txt
-Desktop Qt 6.11.1 MSVC2022 64bit
-```
-
-4. 点击构建。
-
-编译成功后，会生成：
-
-```txt
-qtproject_screenshare.exe
-```
-
-一般路径类似：
-
-```txt
-项目目录\build\Desktop_Qt_6_11_1_MSVC2022_64bit-Debug\qtproject_screenshare.exe
-```
-
----
-
-## 3. 解决 Qt DLL 缺失问题
-
-如果直接双击 exe 报错：
-
-```txt
-由于找不到 Qt6Widgets.dll，无法继续执行代码
-```
-
-说明 exe 旁边缺少 Qt 运行时 DLL，需要执行 `windeployqt`。
-
-### 3.1 先找到 exe
-
-在项目根目录打开 cmd，执行：
-
-```bat
-dir /s /b *.exe
-```
-
-找到类似这个路径：
-
-```txt
-项目目录\build\Desktop_Qt_6_11_1_MSVC2022_64bit-Debug\qtproject_screenshare.exe
-```
-
-### 3.2 进入 exe 所在目录
-
-示例：
-
-```bat
-cd /d "项目目录\build\Desktop_Qt_6_11_1_MSVC2022_64bit-Debug"
-```
-
-### 3.3 执行 windeployqt
-
-如果 Qt 安装路径是：
-
-```txt
-D:\QtCreate\6.11.1\msvc2022_64
-```
-
-执行：
-
-```bat
-"D:\QtCreate\6.11.1\msvc2022_64\bin\windeployqt.exe" --debug qtproject_screenshare.exe
-```
-
-如果 Qt 装在别的位置，把前面的路径换成自己的 Qt 路径即可。
-
-执行完成后，exe 目录下会出现 Qt 依赖文件，例如：
-
-```txt
-Qt6Core.dll
-Qt6Gui.dll
-Qt6Widgets.dll
-Qt6Multimedia.dll
-Qt6Network.dll
-platforms\qwindows.dll
-```
-
-之后就可以双击 exe 运行。
-
----
-
-## 4. 不知道 Qt 安装路径怎么办
-
-可以在项目根目录执行：
-
-```bat
-type build\Desktop_Qt_6_11_1_MSVC2022_64bit-Debug\CMakeCache.txt | findstr /i "Qt6_DIR Qt6Widgets_DIR CMAKE_PREFIX_PATH"
-```
-
-如果输出类似：
-
-```txt
-CMAKE_PREFIX_PATH:PATH=D:/QtCreate/6.11.1/msvc2022_64
-Qt6_DIR:PATH=D:/QtCreate/6.11.1/msvc2022_64/lib/cmake/Qt6
-```
-
-说明 `windeployqt.exe` 在：
-
-```txt
-D:\QtCreate\6.11.1\msvc2022_64\bin\windeployqt.exe
-```
-
-也可以在 Qt Creator 里查看：
-
-```txt
-工具 → 选项 → Kits → Qt Versions
-```
-
-找到 `Qt 6.11.1 MSVC2022 64bit` 对应的 `qmake.exe` 路径，`windeployqt.exe` 就在同一个 `bin` 目录下。
-
----
-
-## 5. 单窗口功能测试
-
-先只打开一个 exe，测试本地功能是否正常。
-
-### 5.1 登录 / 注册
-
-可以先注册一个测试账号，然后登录。登录成功后进入主会议界面。
-
-### 5.2 测试共享桌面
-
-1. 点击底部 `开始共享`。
-2. 选择 `桌面1`。
-3. 确认中间大窗口显示当前桌面内容。
-4. 确认顶部共享悬浮工具条出现。
-5. 点击 `结束共享`，确认回到等待共享状态。
-
-### 5.3 测试白板
-
-1. 点击 `开始共享`。
-2. 选择 `白板`。
-3. 点击 `画笔`。
-4. 在中间白板区域绘制。
-5. 确认笔迹能够显示。
-6. 点击 `结束共享`。
-
-### 5.4 测试窗口共享
-
-1. 点击 `开始共享`。
-2. 选择一个已经打开的窗口，比如浏览器、Qt Creator、文件夹。
-3. 确认中间大窗口显示该窗口内容。
-4. 如果是最小化窗口，程序会尝试恢复后再共享。
-
-注意：部分受保护窗口、管理员权限窗口、硬件加速窗口可能抓不到，这是 Windows 抓屏限制，不一定是程序 bug。
-
-### 5.5 测试摄像头
-
-1. 点击底部 `打开摄像头`。
-2. 如果有多个摄像头，选择一个设备。
-3. 确认顶部第一个小窗口显示本机摄像头画面。
-4. 点击 `关闭摄像头`。
-5. 确认顶部小窗口恢复占位状态。
-
-摄像头画面不会显示到中间大窗口，大窗口只用于共享屏幕、窗口、白板或远端共享画面。
-
----
-
-## 6. 两个 exe 双开通信测试
-
-这是当前版本最重要的测试。
-
-准备：打开两个 exe，分别叫做 A 窗口和 B 窗口。
-
-建议把两个窗口左右摆放，方便观察。
-
-### 6.1 第一轮测试：A 共享屏幕，B 打开摄像头
-
-#### 第一步：A 开启监听
-
-在 A 窗口点击：
-
-```txt
-开启监听
-```
-
-正常状态：
-
-```txt
-状态：监听已启动
-```
-
-或者类似：
-
-```txt
-正在监听 127.0.0.1:9000
-```
-
-如果弹出 Windows 防火墙提示，选择允许。
-
-#### 第二步：B 连接本机
-
-在 B 窗口点击：
-
-```txt
-连接本机
-```
-
-正常状态：
-
-```txt
-状态：已连接
-```
-
-如果出现：
-
-```txt
-Connection refused
-```
-
-说明 A 还没有成功开启监听，或者 9000 端口没有服务在监听。请关闭两个 exe 后重新按顺序测试。
-
-#### 第三步：A 开始共享
-
-在 A 窗口点击：
-
-```txt
-开始共享 → 桌面1
-```
-
-预期效果：
-
-| 窗口 | 预期显示 |
-|---|---|
-| A 窗口大画面 | A 自己共享的桌面 |
-| B 窗口大画面 | A 传过来的共享桌面 |
-
-#### 第四步：B 打开摄像头
-
-在 B 窗口点击：
-
-```txt
 打开摄像头
-```
-
-预期效果：
-
-| 窗口 | 预期显示 |
-|---|---|
-| B 顶部小窗口 | B 本机摄像头画面 |
-| A 顶部小窗口 | B 传过来的远端摄像头画面 |
-| A 大画面 | 仍然显示 A 的共享桌面 |
-| B 大画面 | 仍然显示 A 的远端共享桌面 |
-
-注意：摄像头不要显示在大窗口，大窗口应该继续用于共享屏幕。
-
-#### 第五步：B 关闭摄像头
-
-在 B 窗口点击：
-
-```txt
-关闭摄像头
-```
-
-预期效果：
-
-| 窗口 | 预期显示 |
-|---|---|
-| B 顶部本机摄像头小窗口 | 恢复占位状态 |
-| A 顶部远端摄像头小窗口 | 恢复占位状态，不应停留最后一帧 |
-
-#### 第六步：A 结束共享
-
-在 A 窗口点击：
-
-```txt
-结束共享
-```
-
-预期效果：
-
-| 窗口 | 预期显示 |
-|---|---|
-| A 大画面 | 等待共享 |
-| B 大画面 | 等待共享或不再更新远端共享画面 |
-
----
-
-### 6.2 第二轮测试：反向测试
-
-第一轮成功后，可以反过来测试。
-
-1. A 结束共享。
-2. B 点击 `开始共享 → 桌面1`。
-3. A 点击 `打开摄像头`。
-
-预期效果：
-
-| 窗口 | 预期显示 |
-|---|---|
-| B 大画面 | B 自己共享的桌面 |
-| A 大画面 | B 传过来的远端共享桌面 |
-| A 顶部小窗口 | A 本机摄像头 |
-| B 顶部小窗口 | A 传过来的远端摄像头 |
-
----
-
-## 7. 按钮说明
-
-### 主界面底部按钮
-
-| 按钮 | 作用 |
-|---|---|
-| 开启监听 | 当前 exe 作为服务端，等待另一个 exe 连接 |
-| 连接本机 | 当前 exe 作为客户端，连接到 127.0.0.1:9000 |
-| 开始共享 | 选择桌面、窗口或白板进行共享 |
-| 画笔 | 打开或关闭批注绘图层 |
-| 结束共享 | 停止当前共享 |
-| 打开摄像头 / 关闭摄像头 | 开启或关闭本机摄像头，小窗口显示 |
-
-### 共享悬浮工具条
-
-共享开始后顶部会出现悬浮工具条，包含：
-
-| 功能 | 说明 |
-|---|---|
-| 暂停 / 继续共享 | 暂停或恢复共享画面刷新 |
-| 批注开 / 关 | 打开或关闭画笔层 |
-| 麦克风开 / 关 | 控制麦克风采集状态 |
-| 共享音开 / 关 | 控制系统声音采集状态 |
-| 本地回放 | 用于本地音频调试，默认不建议打开，避免啸叫 |
-| 回到主窗口 | 把主窗口切回前台 |
-| 结束共享 | 停止共享 |
-
----
-
-## 8. 画面显示规则
-
-当前版本的设计规则是：
-
-```txt
-中间大窗口：显示共享屏幕 / 共享窗口 / 白板 / 远端共享画面
-顶部小窗口：显示本机摄像头 / 远端摄像头 / 用户占位
-```
-
-优先级：
-
-1. 如果自己正在共享，大窗口显示自己的共享画面。
-2. 如果自己没有共享，但远端正在共享，大窗口显示远端共享画面。
-3. 摄像头只显示在顶部小窗口，不显示在大窗口。
-4. 关闭摄像头后，本机和远端的小窗口都应该恢复占位状态。
-
----
-
-## 9. 当前通信方式
-
-当前版本使用的是本机 TCP 通信，主要用于双开 exe 测试。
-
-```txt
-监听地址：127.0.0.1
-监听端口：9000
-```
-
-测试方式是：
-
-```txt
-A：开启监听
-B：连接本机
-```
-
-当前版本还不是公网会议，也没有服务器中转。后续如果要做局域网 / 真正网络会议，需要把 `127.0.0.1` 改成局域网 IP，并进一步设计多人连接、房间、用户 ID、音视频同步等功能。
-
----
-
-## 10. 项目主要文件说明
-
-| 文件 | 说明 |
-|---|---|
-| `main.cpp` | 程序入口 |
-| `loginwindow.h/.cpp/.ui` | 登录 / 注册界面 |
-| `mainwindow.h/.cpp/.ui` | 主会议界面，共享、摄像头、连接、UI 控制 |
-| `annotationwindow.h/.cpp` | 画笔浮动工具条 |
-| `annotationoverlay.h/.cpp` | 透明绘图层，保存和绘制笔迹 |
-| `sharetoolbar.h/.cpp` | 共享时顶部悬浮工具条 |
-| `cameramanager.h/.cpp` | 摄像头设备选择、打开、关闭、帧输出 |
-| `sender.h/.cpp` | 把屏幕帧、摄像头帧、音频帧、控制消息交给传输层 |
-| `networktransport.h/.cpp` | 本机 TCP 服务端 / 客户端通信 |
-| `mediareceiver.h/.cpp` | 接收远端媒体包并分发到 UI |
-| `videoencodeworker.h/.cpp` | JPEG 编码线程，减少 UI 卡顿 |
-| `videodecodeworker.h/.cpp` | JPEG 解码线程，减少 UI 卡顿 |
-| `audiocapturer.h/.cpp` | 麦克风采集 |
-| `systemaudiocapturer.h/.cpp` | 系统声音采集 |
-| `audiomixer.h/.cpp` | 麦克风和系统声音混音 |
-| `audioplayer.h/.cpp` | 本地音频播放调试 |
-| `CMakeLists.txt` | 构建配置 |
-
----
-
-## 11. 常见问题
-
-### Q1：连接本机时显示 Connection refused 怎么办？
-
-原因通常是没有先开启监听。
-
-正确顺序是：
-
-```txt
-A：开启监听
-B：连接本机
-```
-
-如果仍然失败，关闭两个 exe 后重开再测。
-
-也可以在 cmd 中检查 9000 端口：
-
-```bat
-netstat -ano | findstr :9000
-```
-
-如果端口被占用，可以先关闭旧的 exe 或结束相关进程。
-
----
-
-### Q2：为什么只能一个窗口开启监听？
-
-因为当前固定使用端口 9000。一个端口同一时间只能被一个服务端监听。
-
-正确测试方式是：
-
-```txt
-一个 exe 点开启监听
-另一个 exe 点连接本机
-```
-
-不要两个 exe 都点开启监听。
-
----
-
-### Q3：摄像头打不开怎么办？
-
-可能原因：
-
-1. 摄像头被微信、腾讯会议、浏览器、系统相机等占用。
-2. Windows 隐私设置禁止桌面应用访问摄像头。
-3. 两个 exe 同时抢同一个摄像头。
-
-建议：
-
-1. 关闭其他占用摄像头的软件。
-2. 进入 Windows 设置，允许桌面应用访问摄像头。
-3. 测试时先只在一个 exe 中打开摄像头。
-
----
-
-### Q4：关闭摄像头后，远端还停留最后一帧怎么办？
-
-当前版本已经加入 `camera_off` 控制消息。关闭摄像头后，远端小窗口应该恢复占位状态。
-
-如果仍然停留最后一帧，检查是否运行的是旧 exe。建议重新编译，并重新执行 `windeployqt` 后再测试。
-
----
-
-### Q5：为什么共享自己的屏幕后会出现“无限套娃”？
-
-因为共享的是整个桌面，而桌面里又包含当前会议窗口。会议窗口里又显示桌面，所以会形成递归画面。
-
-这是正常现象，和腾讯会议、飞书会议共享包含自身窗口时类似。
-
-测试时可以把接收端窗口移到旁边，或者共享某个非会议窗口。
-
----
-
-### Q6：为什么有点卡？
-
-当前版本已经做了多线程优化：
-
-```txt
-JPEG 编码线程
-JPEG 解码线程
-视频只保留最新帧
-发送端降低分辨率
-摄像头限流
-TCP 写缓冲保护
-```
-
-但屏幕共享仍然比普通 UI 程序重，尤其是双开 exe、共享整个桌面、画面中包含自己窗口时。
-
-建议测试时：
-
-1. 不要同时开太多高负载软件。
-2. 尽量不要共享包含自身窗口的桌面。
-3. 可以使用共享选择页中的流畅模式。
-4. 摄像头只开一端即可。
-
----
-
-### Q7：为什么某些窗口共享黑屏？
-
-部分窗口由于 Windows 权限、硬件加速、受保护内容或管理员权限，普通截图方式可能抓不到。
-
-当前 Demo 已经做了 fallback，但不能保证所有窗口都能抓取。真正商用会议软件通常会使用更底层的 Windows Graphics Capture / WebRTC 技术。
-
----
-
-### Q8：本地回放为什么不建议打开？
-
-本地回放主要用于音频链路调试。如果麦克风和扬声器离得很近，可能会啸叫。
-
-一般测试共享屏幕和摄像头时，不需要打开本地回放。
-
----
-
-## 12. 建议演示流程
-
-课堂或小组演示时，可以按下面流程：
-
-1. 打开两个 exe。
-2. A 点击 `开启监听`。
-3. B 点击 `连接本机`。
-4. A 点击 `开始共享 → 桌面1`。
-5. 说明：B 的大窗口可以看到 A 的共享桌面。
-6. B 点击 `打开摄像头`。
-7. 说明：A 的顶部小窗口可以看到 B 的摄像头。
-8. B 点击 `关闭摄像头`。
-9. 说明：A 的远端摄像头小窗口恢复占位状态。
-10. A 点击 `画笔`，在共享画面上批注。
-11. A 点击 `结束共享`。
-12. 反向测试：B 共享桌面，A 打开摄像头。
-
----
-
-## 13. 当前阶段说明
-
-当前版本主要完成的是：
-
-```txt
-第一阶段：本地会议功能整合
-第二阶段前置：本机双开 TCP 通信验证
-```
-
-已经可以演示：
-
-```txt
-共享屏幕 + 摄像头互传 + 白板 + 画笔 + 基础声音链路
-```
-
-但还没有完成真正的多人网络会议。后续如果继续做，可以扩展：
-
-- 局域网 IP 连接。
-- 多客户端连接。
-- 房间号。
-- 用户列表。
-- 音频远端播放。
-- 更稳定的音视频同步。
-- H.264 / Opus 编码。
-- WebRTC。
-
-## v5 修复说明
-
-本版本在 v4 基础上补充了以下修复：
-
-1. **共享选择窗口支持窗口缩略图**
-   - “已打开的窗口 / 最小化窗口”区域不再只显示默认窗口图标。
-   - 普通可见窗口会尝试生成真实缩略图。
-   - 最小化窗口仍显示默认占位图标，并保留“最小化”标注。
-
-2. **主窗口支持最大化 / 放大自适应**
-   - 修复最大化后右侧出现大片空白的问题。
-   - 顶部用户区、主共享区、底部控制栏会根据窗口尺寸重新布局。
-
-3. **提高共享画质**
-   - 普通模式主画面发送上限调整到约 1920×1080，JPEG 质量提高到 88。
-   - 流畅模式主画面发送上限调整到约 1280×720，JPEG 质量提高到 70。
-   - 本地预览和远端显示缩放改为平滑缩放。
-
-4. **窗口共享实时性改进**
-   - 对 Chrome / Qt Creator / 飞书等窗口，优先尝试实时可见区域采集，减少“只有初始帧、不跟随窗口内容变化”的情况。
-   - 如果实时采集失败，再回退到 PrintWindow / BitBlt。
-
-注意：窗口共享的实时采集依赖目标窗口处于可见状态。若目标窗口被其他窗口完全遮挡，Windows 的屏幕裁剪方式可能无法得到正确内容；这种情况下建议测试时让目标窗口保持可见，或优先使用“桌面共享”。
-
-
-## v8.2 更新：结束共享同步与高清传输
-
-- 修复一端点击“结束共享”后，其他端仍停留在最后一帧的问题。现在会广播 `share_off` 控制消息，远端自动恢复“等待共享”。
-- 普通模式下主共享改为原始分辨率 + PNG 无损编码，减少文字和界面边缘发糊。
-- “流畅模式”仍然保留为 1280×720 + JPEG，适合卡顿时使用。
-
-详细说明见 `docs/V8_2_SHARE_STOP_HD_NOTES.md`。
-
-
-## v8.4 代码整理分块说明
-
-v8.4 不改变现有功能逻辑，只把 `src/app/mainwindow.cpp` 按职责拆成多个实现文件，方便后续维护：共享弹窗、会议控制、动态参会者、摄像头媒体、共享逻辑、画笔逻辑、悬浮工具条分别放在不同 cpp 中。详细说明见 `docs/V8_4_CODE_ORGANIZATION_NOTES.md`。
+    ↓
+CameraManager 创建 QCamera / QVideoSink
+    ↓
+QVideoSink 产生 QVideoFrame
+    ↓
+CameraManager 转换为 QImage
+    ↓
+MainWindow 显示到本机小窗口
+    ↓
+Sender 接收摄像头帧
+    ↓
+VideoEncodeWorker 编码
+    ↓
+NetworkTransport 发送
+    ↓
+远端 MediaReceiver 解码
+    ↓
+更新对应参会者小窗口
+摄像头错误信息采用中文提示，常见场景包括：设备被其他程序占用、无摄像头设备、摄像头权限不足等。
+
+2.5 屏幕、窗口与白板共享
+系统支持多种共享源：
+
+桌面 1
+桌面 2
+已打开窗口
+白板
+共享选择界面支持显示屏幕缩略图和窗口缩略图，用户可以直观选择共享目标。共享内容会显示在本机主窗口，并通过网络发送到其他参会者。
+
+共享端结束共享时会发送 share_off 控制消息，远端收到后会清空主显示区域，避免停留在最后一帧。
+
+2.6 画笔与批注
+系统支持在共享内容上进行画笔批注。
+
+共享桌面批注
+共享窗口批注
+白板书写
+关闭画笔后保留已有笔迹
+结束共享时清理批注状态
+批注内容可与共享画面合成后发送
+画笔入口在主窗口和共享悬浮工具条中均可访问，功能上属于同一批注模块。
+
+2.7 音频采集与混音接口
+音频模块提供基础采集、混音和播放能力：
+
+麦克风采集
+系统声音采集
+麦克风与系统声音混音
+远端音频播放接口
+本地回放调试接口
+音频链路当前主要作为会议 Demo 的基础能力保留，后续可以进一步扩展为多路音频混音、回声抑制、音频同步和更高效的音频编码。
+
+3. 系统架构
+项目采用功能分层结构，将 UI、媒体、网络、音频、采集、批注等逻辑拆分到不同模块中。
+
+screenshare_win/
+├── src/
+│   ├── app/                    # 主窗口、会议控制、UI 调度
+│   ├── annotation/             # 画笔、批注、白板叠加
+│   ├── audio/                  # 麦克风、系统声音、混音、播放
+│   ├── capture/                # 屏幕/窗口枚举与采集抽象
+│   ├── media/                  # 摄像头、发送器、接收器、视频编解码
+│   ├── network/                # 多人 TCP 通信、会议码、Host 转发
+│   └── platform/windows/wgc/   # Windows Graphics Capture 后端
+├── docs/                       # 架构与模块说明文档
+├── translations/               # 翻译资源
+└── CMakeLists.txt
+整体数据流如下：
+
+flowchart LR
+    Camera[CameraManager 摄像头采集] --> MainUI[MainWindow 小窗口显示]
+    Screen[屏幕/窗口/白板采集] --> MainView[MainWindow 主显示区]
+    MainUI --> Sender[Sender 媒体发送器]
+    MainView --> Sender
+    Sender --> Encoder[VideoEncodeWorker 编码线程]
+    Encoder --> Net[NetworkTransport]
+    Net --> Host[Host 中心转发]
+    Host --> RemoteNet[远端 NetworkTransport]
+    RemoteNet --> Receiver[MediaReceiver]
+    Receiver --> Decoder[VideoDecodeWorker 解码线程]
+    Decoder --> RemoteUI[远端 MainWindow 显示]
+4. 主要模块说明
+4.1 src/app/
+负责主界面、会议控制和 UI 调度。
+
+文件	说明
+mainwindow.cpp	主窗口基础初始化
+mainwindow_meeting.cpp	创建会议、加入会议、会议码、参会者事件
+mainwindow_camera_media.cpp	摄像头开关、本地/远端媒体回调
+mainwindow_participants.cpp	动态参会者小窗口管理
+mainwindow_share_logic.cpp	共享启动、结束、共享源切换
+mainwindow_share_popup.cpp	共享内容选择界面、缩略图生成
+mainwindow_annotation.cpp	画笔、批注、白板相关逻辑
+mainwindow_toolbar.cpp	共享悬浮工具条逻辑
+loginwindow.cpp	登录窗口逻辑
+sharetoolbar.cpp	共享时悬浮控制栏
+MainWindow 是系统总控入口，但具体实现已经按功能拆分到多个 mainwindow_*.cpp 文件中，以降低单文件复杂度。
+
+4.2 src/network/
+网络层核心文件：
+
+文件	说明
+networktransport.h	网络接口、消息类型、连接状态信号定义
+networktransport.cpp	Host/Client 通信、会议码校验、多客户端转发
+核心类：
+
+TcpPacketTransport
+主要职责：
+
+Host 创建会议
+Client 加入会议
+会议码校验
+用户 ID 分配
+参会者加入/离开广播
+媒体包封装与发送
+Host 多客户端媒体转发
+TCP 粘包/半包处理
+非可靠视频包缓冲保护
+消息类型：
+
+EnvelopeType	含义
+Hello	Client 申请加入会议
+Welcome	Host 允许加入并分配身份
+Reject	Host 拒绝加入，例如会议码错误
+PeerJoined	有用户加入会议
+PeerLeft	有用户离开会议
+Media	摄像头、共享屏幕、音频或控制消息
+网络包采用外层 Envelope 结构：
+
+Envelope:
+  type
+  senderId
+  userName
+  payloadSize
+  payload
+其中 payload 可以是 Sender 生成的媒体包。
+
+为了处理 TCP 粘包问题，发送时在每个 Envelope 前增加 4 字节长度头：
+
+[4 字节长度][Envelope 内容]
+接收端为每个 socket 维护独立 readBuffer，只有完整包到达后才调用解析逻辑。
+
+4.3 src/media/
+媒体层负责摄像头、发送、接收、视频编码和解码。
+
+文件	说明
+cameramanager.cpp	摄像头设备枚举、打开、关闭、帧转换
+sender.cpp	本地媒体流注册、打包、队列、发送
+mediareceiver.cpp	远端媒体包解析和分发
+videoencodeworker.cpp	独立线程视频编码
+videodecodeworker.cpp	独立线程视频解码
+核心设计：
+
+摄像头帧使用 QImage 作为内部统一格式
+主共享画面普通模式使用高清无损编码
+流畅模式使用压缩编码以提高实时性
+摄像头流限制尺寸和帧率，适合小窗口显示
+视频编码、解码放到独立线程，避免阻塞 UI
+发送队列只保留最新视频帧，降低延迟
+4.4 src/annotation/
+批注层负责画笔和白板操作。
+
+文件	说明
+annotationoverlay.cpp	实际绘制笔迹、文字、橡皮擦等
+annotationwindow.cpp	批注窗口和浮动工具条封装
+主要能力：
+
+鼠标轨迹绘制
+文字批注
+橡皮擦
+清空批注
+批注图层导出为图像
+与共享画面合成
+4.5 src/audio/
+音频层负责声音采集、混音和播放。
+
+文件	说明
+audiocapturer.cpp	麦克风采集
+systemaudiocapturer.cpp	系统声音采集
+audiomixer.cpp	麦克风与系统声音混音
+audioplayer.cpp	PCM 音频播放
+4.6 src/capture/
+采集层用于屏幕/窗口源枚举和采集抽象。
+
+文件	说明
+sourceenumerator.cpp	枚举屏幕和可共享窗口
+screencapturer.cpp	屏幕/窗口采集抽象层
+该层为后续统一 DXGI、WGC、GDI、PrintWindow 等采集方式提供扩展基础。
+
+4.7 src/platform/windows/wgc/
+Windows 平台采集后端，用于窗口采集扩展。
+
+文件	说明
+wgcwindowcapturebackend.cpp	Windows Graphics Capture 窗口采集后端
+设计目标是为窗口共享提供更稳定的实时采集能力，并在必要时与其他采集方式进行降级配合。
+
+5. 关键流程说明
+5.1 创建会议流程
+MainWindow::startHostMeeting()
+    ↓
+生成会议码
+    ↓
+TcpPacketTransport::listen()
+    ↓
+设置 m_serverMode = true
+    ↓
+设置本机 userId = host
+    ↓
+保存会议码
+    ↓
+QTcpServer::listen()
+    ↓
+等待 Client 连接
+5.2 加入会议流程
+MainWindow::connectLocalMeeting()
+    ↓
+输入会议码
+    ↓
+TcpPacketTransport::connectToPeer()
+    ↓
+创建 QTcpSocket
+    ↓
+connectToHost()
+    ↓
+onClientConnected()
+    ↓
+sendHello()
+    ↓
+Host 校验会议码
+5.3 会议码校验流程
+Client sendHello()
+    ↓
+Host onSocketReadyRead()
+    ↓
+handleEnvelope()
+    ↓
+handleServerEnvelope(Hello)
+    ↓
+解析 requestedCode
+    ↓
+比较 requestedCode 与 m_meetingCode
+    ↓
+错误：Reject 并断开
+正确：分配 userId，发送 Welcome，广播 PeerJoined
+5.4 摄像头采集与发送流程
+btnCamera clicked
+    ↓
+MainWindow::toggleCamera()
+    ↓
+CameraManager::startCameraByIndex()
+    ↓
+QCamera::start()
+    ↓
+QVideoSink::videoFrameChanged
+    ↓
+CameraManager::onVideoFrameChanged()
+    ↓
+emit frameReady(QImage)
+    ↓
+MainWindow::onLocalCameraFrame()
+    ↓
+updateParticipantVideo(localUserId, image)
+    ↓
+Sender::onPipFrameCaptured(image)
+    ↓
+VideoEncodeWorker 编码
+    ↓
+NetworkTransport::sendPacket()
+5.5 Host 媒体转发流程
+Client Sender
+    ↓
+NetworkTransport::sendPacket()
+    ↓
+writeEnvelope(Media)
+    ↓
+Host handleServerEnvelope(Media)
+    ↓
+根据 socket 找到 ClientSession
+    ↓
+emit packetReceivedFromPeer(senderId, payload)
+    ↓
+Host 本地显示该媒体
+    ↓
+broadcastMedia(senderId, userName, payload)
+    ↓
+转发给其他 Client
+5.6 远端摄像头显示流程
+Client 收到 Media
+    ↓
+handleClientEnvelope(Media)
+    ↓
+emit packetReceivedFromPeer(senderId, payload)
+    ↓
+MainWindow::onMeetingPacketReceived()
+    ↓
+receiverForPeer(senderId)
+    ↓
+MediaReceiver::onPacketReceived()
+    ↓
+VideoDecodeWorker 解码
+    ↓
+cameraFrameReceived(image)
+    ↓
+updateParticipantVideo(senderId, image)
+    ↓
+显示到对应参会者小窗口
+5.7 用户离开流程
+socket disconnected
+    ↓
+onSocketDisconnected()
+    ↓
+removeSocket()
+    ↓
+broadcastPeerLeft()
+    ↓
+participantLeft()
+    ↓
+removeParticipantTile()
+6. 实时性与性能设计
+6.1 编码与解码线程
+视频编码和解码均放在独立 worker 中执行：
+
+VideoEncodeWorker
+VideoDecodeWorker
+这样可以避免 PNG/JPEG 编解码阻塞主线程，提升 UI 响应性。
+
+6.2 最新帧优先策略
+视频会议更关注实时性，而不是完整保留每一帧。
+
+因此发送端采用“只保留最新帧”的策略：
+
+如果上一帧还在编码
+    ↓
+新帧到来时替换旧 pending 帧
+    ↓
+编码完成后只处理最新 pending 帧
+这样可以避免因编码或网络变慢导致画面延迟持续增加。
+
+6.3 TCP 缓冲保护
+对于非可靠视频包，如果 socket 待发送缓冲区过大，系统会主动丢弃部分视频帧。
+
+非可靠包 + TCP bytesToWrite 超过阈值
+    ↓
+丢弃当前包
+控制消息、用户加入离开、摄像头关闭、共享结束等重要消息仍以可靠方式发送。
+
+6.4 高清与流畅模式
+主共享画面支持不同策略：
+
+模式	特点
+高清模式	保持较高清晰度，适合文字和界面展示
+流畅模式	限制分辨率并压缩，降低带宽和编码压力
+摄像头画面主要用于小窗口，因此会限制尺寸和帧率，以减少多用户场景下的性能压力。
+
+7. 关键设计决策
+7.1 采用 Host 中心转发而不是全互连
+全互连模式下，n 个用户需要维护：
+n × (n - 1) / 2条连接。随着用户数量增加，连接管理、状态同步和媒体转发都会迅速复杂化。
+
+中心转发模式下，n 个用户只需要：n - 1条 Client 到 Host 的连接，结构更加清晰，也更适合作为会议 Demo 的基础架构。
+
+7.2 使用 senderId 进行用户级媒体分发
+每个媒体包在会议层都会携带发送者 ID。
+
+接收端根据 senderId 判断：
+
+这个摄像头画面属于哪个用户
+应该更新哪个小窗口
+这个共享画面来自哪个参会者
+这使多人小窗口显示成为可能。
+
+7.3 外层 Envelope 与内层媒体包分离
+系统将网络会议层和媒体内容层分离：
+
+外层 Envelope：负责会议消息类型、senderId、userName
+内层 Payload：负责具体媒体内容，如摄像头帧、共享屏幕帧、音频帧
+这样可以保持网络层和媒体层解耦，便于后续扩展新的消息类型或媒体类型。
+
+8. 后续扩展方向
+当前系统已经完成多人会议 Demo 的核心链路，后续可以继续扩展：
+
+局域网主机 IP 输入
+会议成员权限控制
+独立会议服务器进程
+H.264 / H.265 视频编码
+Opus 音频编码
+多路音频混音与回声处理
+更完整的窗口共享后端
+共享控制权申请与切换
+WebRTC 化通信架构
+NAT 穿透与公网会议支持
+9. 项目总结
+本项目实现了一个具备多人会议核心能力的 Qt/C++ 原型系统。系统支持通过会议码创建和加入会议，采用 Host 中心转发架构完成多实例通信，并实现了摄像头小窗、动态参会者管理、屏幕/窗口/白板共享、画笔批注、音频采集接口和实时媒体传输。
+
+项目重点验证了从本地媒体采集、编码、网络发送、Host 转发、远端接收、解码到 UI 显示的完整链路，为后续扩展成更完整的网络会议系统奠定了基础。
