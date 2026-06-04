@@ -24,7 +24,6 @@ qt_add_executable(screenShare
     network/RoomServer.h
     network/RoomClient.cpp
     network/RoomClient.h
-    capture/screencapturer.cpp
     capture/screencapturer.h
     capture/sourceenumerator.cpp
     capture/sourceenumerator.h
@@ -32,6 +31,18 @@ qt_add_executable(screenShare
     capture/sharesourcepicker.h
     capture/AnnotationTypes.h
 )
+
+if(APPLE)
+    enable_language(OBJCXX)
+    target_sources(screenShare PRIVATE capture/screencapturer.mm)
+    target_link_libraries(screenShare PRIVATE
+        "-framework ApplicationServices"
+        "-framework CoreVideo"
+        "-framework ScreenCaptureKit"
+    )
+else()
+    target_sources(screenShare PRIVATE capture/screencapturer.cpp)
+endif()
 
 qt_add_translations(
     TARGETS screenShare
@@ -52,10 +63,6 @@ target_link_libraries(screenShare
         Qt::Widgets
         Qt::Network
 )
-
-if(APPLE)
-    target_link_libraries(screenShare PRIVATE "-framework ApplicationServices")
-endif()
 
 install(TARGETS screenShare
     BUNDLE  DESTINATION .

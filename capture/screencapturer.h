@@ -21,6 +21,7 @@ class ScreenCapturer : public QObject
 
 public:
     explicit ScreenCapturer(QObject *parent = nullptr);
+    ~ScreenCapturer();
 
     void start(int fps = 15);
     void startScreen(int screenIndex, int fps = 15);
@@ -30,6 +31,8 @@ public:
 
     void setOutputSize(const QSize &size) { m_outputSize = size; }
     QSize outputSize() const { return m_outputSize; }
+
+    static QImage captureWindowOnce(quintptr windowId, const QSize &outputSize = {});
 
 signals:
     void frameCaptured(const QImage &frame);
@@ -54,6 +57,7 @@ private:
     int m_screenIndex = 0;
     quintptr m_windowHandle = 0;
     qint64 m_frameIndex = 0;
+    void *m_streamContext = nullptr;
 };
 
 #endif // SCREENCAPTURER_H

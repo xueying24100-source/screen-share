@@ -22,16 +22,86 @@ screen-share/
 │   ├── LoginPage.h/.cpp      # 登录页 — 输入昵称、房间号、服务器地址
 │   └── RoomPage.h/.cpp       # 房间页 — 屏幕观看、工具栏、成员列表
 ├── widgets/
-│   ├── ScreenView.h/.cpp     # 屏幕画面渲染组件
+│   ├── ScreenView.h/.cpp     # 屏幕画面渲染 + 标注绘制
 │   ├── MemberList.h/.cpp     # 成员列表组件
 │   └── ToolButton.h/.cpp     # 工具栏按钮组件
 ├── network/
 │   ├── RoomServer.h/.cpp     # TCP 房间管理服务器
 │   └── RoomClient.h/.cpp     # TCP 房间管理客户端
+├── capture/
+│   ├── screencapturer.h      # 采集模块公共头文件
+│   ├── screencapturer.cpp    # 采集模块 Windows 实现
+│   ├── screencapturer.mm     # 采集模块 macOS 实现（SCStream + CoreGraphics）
+│   ├── sourceenumerator.h/.cpp  # 屏幕/窗口枚举
+│   ├── sharesourcepicker.h/.cpp # 共享源选择对话框
+│   └── AnnotationTypes.h     # 标注数据类型定义
 ├── .github/workflows/
 │   └── build-mac.yml         # GitHub Actions 自动构建（macOS + Windows）
 └── CMakeLists.txt            # CMake 构建配置
 ```
+
+## 核心模块与方法索引
+
+### 屏幕采集（macOS: SCStream 流式推流）
+
+| 方法 | 位置 | 说明 |
+|------|------|------|
+| `ScreenCapturer::startScreen()` | `capture/screencapturer.h:26` | 设置屏幕模式并启动采集 |
+| `ScreenCapturer::start()` | `capture/screencapturer.mm` | macOS 屏幕模式走 SCStream，降级走 QTimer |
+| `SCStreamFrameBridge` | `capture/screencapturer.mm` | SCStream 回调桥接，CVPixelBuffer → QImage |
+| `startScreenStream()` | `capture/screencapturer.mm` | 创建 SCStream 并启动流式采集 |
+| `stopScreenStream()` | `capture/screencapturer.mm` | 停止 SCStream 并释放资源 |
+| `qImageFromPixelBuffer()` | `capture/screencapturer.mm` | CVPixelBuffer 转 QImage |
+| `copyShareableContentSync()` | `capture/screencapturer.mm` | 同步获取 SCShareableContent |
+
+### 屏幕采集（Windows / macOS 降级）
+
+| 方法 | 位置 | 说明 |
+|------|------|------|
+| `ScreenCapturer::captureScreen()` | `capture/screencapturer.cpp` / `.mm` | QTimer 定时器触发，QScreen::grabWindow 截图 |
+| `ScreenCapturer::stop()` | `capture/screencapturer.h:28` | 停止采集（SCStream 或 QTimer） |
+
+### 窗口采集（macOS: ScreenCaptureKit + CoreGraphics 双后端）
+
+| 方法 | 位置 | 说明 |
+|------|------|------|
+| `ScreenCapturer::startWindow()` | `capture/screencapturer.h:27` | 设置窗口模式并启动采集 |
+| `captureWindow()` | `capture/screencapturer.mm` | 调用 captureWindowRaw 获取帧 |
+| `captureWindowRaw()` | `capture/screencapturer.mm` | 优先 ScreenCaptureKit，降级 CoreGraphics |
+| `captureWindowRawWithScreenCaptureKit()` | `capture/screencapturer.mm` | macOS 14+ 高清窗口截图 |
+| `captureWindowRawWithCoreGraphics()` | `capture/screencapturer.mm` | CGWindowListCreateImage 回退方案 |
+| `captureWindowOnce()` | `capture/screencapturer.h:34` | 静态方法，一次性截图（用于缩略图预览） |
+
+### 屏幕/窗口枚举与选择
+
+| 方法 | 位置 | 说明 |
+|------|------|------|
+| `SourceEnumerator::enumerateScreens()` | `capture/sourceenumerator.h` | 枚举所有显示器 |
+| `SourceEnumerator::enumerateWindows()` | `capture/sourceenumerator.h` | 枚举所有可见窗口 |
+| `ShareSourcePicker` | `capture/sharesourcepicker.h/.cpp` | 共享源选择对话框（卡片式 UI） |
+
+### 画笔标注模块
+
+| 类型 | 位置 | 说明 |
+|------|------|------|
+| `AnnotationTool` / `AnnotationAction` | `capture/AnnotationTypes.h` | 标注工具（画笔/矩形）和动作枚举 |
+| `AnnotationCommand` | `capture/AnnotationTypes.h` | 标注命令结构体（归一化坐标，用于网络同步） |
+| `ScreenView::setAnnotationTool()` | `widgets/ScreenView.h` | 设置标注工具类型 |
+| `ScreenView::addAnnotation()` | `widgets/ScreenView.h` | 添加远程标注命令并渲染 |
+| `ScreenView::clearAnnotations()` | `widgets/ScreenView.h` | 清除所有标注 |
+| `ScreenView::annotationCreated()` | `widgets/ScreenView.h` | 信号，本地标注完成时发射 |
+| `RoomClient::sendAnnotation()` | `network/RoomClient.h` | 发送标注命令到服务器 |
+| `RoomServer::handleMessage()` | `network/RoomServer.cpp:128` | 转发 annotation 消息到房间成员 |
+
+### 帧传输与渲染
+
+| 方法 | 位置 | 说明 |
+|------|------|------|
+| `ScreenCapturer::frameCaptured()` | `capture/screencapturer.h` | 信号，每帧采集完成时发射 |
+| `RoomPage::onLocalFrameCaptured()` | `pages/RoomPage.cpp` | 本地帧预览 + JPEG 编码发送 |
+| `RoomPage::onRemoteFrameReceived()` | `pages/RoomPage.cpp` | 接收远程 JPEG 帧并解码渲染 |
+| `RoomClient::sendVideoFrame()` | `network/RoomClient.h` | 发送视频帧到服务器 |
+| `ScreenView::updateFrame()` | `widgets/ScreenView.h` | 更新显示的画面帧 |
 
 ## 架构设计
 

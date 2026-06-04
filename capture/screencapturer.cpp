@@ -73,6 +73,38 @@ ScreenCapturer::ScreenCapturer(QObject *parent)
     connect(m_timer, &QTimer::timeout, this, &ScreenCapturer::captureFrame);
 }
 
+ScreenCapturer::~ScreenCapturer()
+{
+    stop();
+}
+
+QImage ScreenCapturer::captureWindowOnce(quintptr windowId, const QSize &outputSize)
+{
+#ifdef Q_OS_MACOS
+    if (windowId == 0) {
+        return {};
+    }
+
+    CGImageRef imageRef = CGWindowListCreateImage(
+        CGRectNull,
+        kCGWindowListOptionIncludingWindow,
+        static_cast<CGWindowID>(windowId),
+        kCGWindowImageBoundsIgnoreFraming | kCGWindowImageNominalResolution);
+
+    if (!imageRef) {
+        return {};
+    }
+
+    const QImage frame = imageFromCGImage(imageRef);
+    CGImageRelease(imageRef);
+    return prepareOutputFrame(frame, outputSize);
+#else
+    Q_UNUSED(windowId);
+    Q_UNUSED(outputSize);
+    return {};
+#endif
+}
+
 void ScreenCapturer::start(int fps)
 {
     if (m_running) {
@@ -211,4 +243,3 @@ void ScreenCapturer::emitFrame(const QImage &frame, const QString &backendName,
     meta.frameIndex = m_frameIndex;
     emit frameMetadataChanged(meta);
 }
-

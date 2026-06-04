@@ -1,5 +1,6 @@
 #include "sharesourcepicker.h"
 
+#include "screencapturer.h"
 #include "sourceenumerator.h"
 
 #include <QApplication>
@@ -243,7 +244,11 @@ void ShareSourcePicker::populateWindows()
         const WindowInfo &info = windows.at(i);
         auto *card = new SourceCard(m_windowTab);
         card->setTexts(info.title, "应用窗口");
-        card->setThumbnail(placeholderThumbnail("窗口"));
+        const QImage thumbnail = ScreenCapturer::captureWindowOnce(
+            info.handle, QSize(kThumbW, kThumbH));
+        card->setThumbnail(thumbnail.isNull()
+            ? placeholderThumbnail("窗口")
+            : QPixmap::fromImage(thumbnail));
         m_windowGrid->addWidget(card, i / 3, i % 3);
 
         connect(card, &SourceCard::clicked, this, [this, card, hwnd = info.handle]() {
