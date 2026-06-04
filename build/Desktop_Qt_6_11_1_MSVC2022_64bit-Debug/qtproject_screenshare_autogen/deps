@@ -1,0 +1,831 @@
+qtproject_screenshare_autogen/timestamp: \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QByteArray \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QDebug \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QElapsedTimer \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QHash \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QIODevice \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QJsonObject \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QList \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QMap \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QMetaObject \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QObject \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QPoint \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QPointF \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QPointer \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QQueue \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QRect \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QScopedPointer \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QSize \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QSizeF \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QString \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QStringList \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QThread \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QTimer \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QTimerEvent \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/QtGlobal \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q17memory.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20bit.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20functional.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20iterator.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20memory.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20type_traits.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q20utility.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q23type_traits.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/q23utility.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qabstracteventdispatcher.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qabstractitemmodel.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qalgorithms.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qalloc.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qanystringview.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qarraydata.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qarraydataops.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qarraydatapointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qassert.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qatomic.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qatomic_cxx11.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbasicatomic.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbasictimer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbindingstorage.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbytearray.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbytearrayalgorithms.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbytearraylist.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qbytearrayview.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcalendar.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcborcommon.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcborvalue.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qchar.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcheckedint_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcompare.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcompare_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcomparehelpers.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcompilerdetection.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qconfig.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qconstructormacros.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcontainerfwd.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcontainerinfo.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcontainertools_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcontiguouscache.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcoreapplication.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcoreapplication_platform.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qcoreevent.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qdarwinhelpers.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qdatastream.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qdatetime.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qdeadlinetimer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qdebug.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qelapsedtimer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qendian.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qeventloop.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qexceptionhandling.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qflags.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qfloat16.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qforeach.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qfunctionaltools_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qfunctionpointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qgenericatomic.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qglobalstatic.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qhash.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qhashfunctions.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qiodevice.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qiodevicebase.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qiterable.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qiterator.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qjsondocument.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qjsonobject.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qjsonparseerror.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qjsonvalue.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qlatin1stringview.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qline.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qlist.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qlocale.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qlogging.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmalloc.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmap.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmargins.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmath.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmetacontainer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qmetatype.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qminmax.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qnamespace.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qnativeinterface.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qnumeric.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qobject.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qobject_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qobjectdefs.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qobjectdefs_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qoverload.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qpair.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qpoint.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qpointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qprocessordetection.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qqueue.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qrect.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qrefcount.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qregularexpression.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qscopedpointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qscopeguard.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qset.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qshareddata.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qshareddata_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qsharedpointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qsharedpointer_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qsize.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qspan.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstdlibdetection.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstring.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringalgorithms.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringbuilder.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringconverter.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringconverter_base.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringfwd.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringlist.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringmatcher.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringtokenizer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qstringview.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qswap.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qsysinfo.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qsystemdetection.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtaggedpointer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtclasshelpermacros.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtconfiginclude.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtconfigmacros.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtcore-config.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtcoreexports.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtcoreglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtdeprecationdefinitions.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtdeprecationmarkers.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtenvironmentvariables.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtextstream.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtformat_impl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qthread.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtimer.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtmetamacros.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtnoop.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtpreprocessorsupport.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtresource.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qttranslation.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qttypetraits.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtversion.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtversionchecks.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtypeinfo.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qtypes.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qurl.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qutf8stringview.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/quuid.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qvariant.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qvarlengtharray.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qversiontagging.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qxptype_traits.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtCore/qyieldcpu.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QColor \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QIcon \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QImage \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QKeyEvent \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QMouseEvent \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QPixmap \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QResizeEvent \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/QTransform \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qaction.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qbitmap.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qbrush.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qcolor.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qcursor.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qevent.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qeventpoint.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qfont.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qfontinfo.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qfontmetrics.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qfontvariableaxis.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qguiapplication.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qguiapplication_platform.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qicon.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qimage.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qinputdevice.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qinputmethod.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qkeysequence.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpaintdevice.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpalette.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpicture.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpixelformat.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpixmap.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpointingdevice.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qpolygon.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qregion.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qrgb.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qrgba64.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qscreen.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qscreen_platform.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qtextdocument.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qtgui-config.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qtguiexports.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qtguiglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qtransform.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qvalidator.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qvector2d.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qvectornd.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qwindowdefs.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtGui/qwindowdefs_win.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/QAudioFormat \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/QAudioInput \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/QAudioSink \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/QAudioSource \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/QMediaDevices \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudio.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudiodevice.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudioformat.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudioinput.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudiosink.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qaudiosource.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qmediadevices.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qtaudio.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qtmultimedia-config.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qtmultimediaexports.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtMultimedia/qtmultimediaglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/QHostAddress \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/qabstractsocket.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/qhostaddress.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/qtnetwork-config.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/qtnetworkexports.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtNetwork/qtnetworkglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QComboBox \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QFrame \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QHBoxLayout \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QLabel \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QMainWindow \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QPushButton \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QSlider \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/QWidget \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qabstractbutton.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qabstractitemdelegate.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qabstractslider.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qabstractspinbox.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qboxlayout.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qcombobox.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qframe.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qgridlayout.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qlabel.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qlayout.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qlayoutitem.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qmainwindow.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qpushbutton.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qrubberband.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qsizepolicy.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qslider.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qstyle.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qstyleoption.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qtabbar.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qtabwidget.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qtwidgets-config.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qtwidgetsexports.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qtwidgetsglobal.h \
+	D:/QT/6.11.1/msvc2022_64/include/QtWidgets/qwidget.h \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/FindWrapAtomic.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/FindWrapVulkanHeaders.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6Config.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6ConfigExtras.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6ConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6Dependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6Targets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6TargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/Qt6VersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtFeature.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtFeatureCommon.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtInstallPaths.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicAndroidHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicAppleHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicCMakeEarlyPolicyHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicCMakeHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicCMakeVersionHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicDependencyHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicExternalProjectHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicFinalizerHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicFindPackageHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicGitHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicPluginHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicPluginHelpers_v2.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomAttributionHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomBuildToolHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomCommonGenerationHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomCpeHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomCycloneDXHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomDepHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomDocumentNamespaceHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomExternalReferenceHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomGenerationCycloneDXHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomGenerationHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomLicenseHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomOpsHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomPurlHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomPythonHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomQtEntityHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomRelationshipHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicSbomSystemDepHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicTargetHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicTestHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicToolHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicWalkLibsHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/QtPublicWindowsHelpers.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6/windows/app.exe.manifest.in \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Concurrent/Qt6ConcurrentVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreConfigExtras.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreMacros.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Core/Qt6CoreVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6CoreTools/Qt6CoreToolsVersionlessTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointPrivateVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiPlugins.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6GuiVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QGifPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QJpegPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QOffscreenIntegrationPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgIconPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QSvgPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QTuioTouchPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsDirect2DIntegrationPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Gui/Qt6QWindowsIntegrationPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6GuiTools/Qt6GuiToolsVersionlessTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaMacros.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaPlugins.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6MultimediaVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QFFmpegMediaPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Multimedia/Qt6QWindowsMediaPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkPlugins.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6NetworkVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QNLMNIPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QSchannelBackendPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendCertOnlyPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Network/Qt6QTlsBackendOpenSSLPluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6QModernWindowsStylePluginTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsMacros.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsPlugins.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6Widgets/Qt6WidgetsVersionlessAliasTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsAdditionalTargetInfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfig.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfigVersion.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsConfigVersionImpl.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsDependencies.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargets-debug.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargets-relwithdebinfo.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargets.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsTargetsPrecheck.cmake \
+	D:/QT/6.11.1/msvc2022_64/lib/cmake/Qt6WidgetsTools/Qt6WidgetsToolsVersionlessTargets.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeCXXInformation.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeCommonLanguageInclude.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeFindDependencyMacro.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeGenericSystem.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeInitializeConfigs.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeLanguageInformation.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeRCInformation.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeSystemSpecificInformation.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CMakeSystemSpecificInitialize.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CheckCXXCompilerFlag.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CheckIncludeFileCXX.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/CheckLibraryExists.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Compiler/CMakeCommonCompilerMacros.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Compiler/MSVC-CXX.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Compiler/MSVC.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/FindPackageMessage.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/FindThreads.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/FindVulkan.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/GNUInstallDirs.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Internal/CheckCompilerFlag.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Internal/CheckFlagCommonConfig.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Platform/Windows-Initialize.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Platform/Windows-MSVC-CXX.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Platform/Windows-MSVC.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Platform/Windows.cmake \
+	D:/QT/Tools/CMake_64/share/cmake-3.30/Modules/Platform/WindowsPaths.cmake \
+	D:/ScreenShare/screen-share/CMakeLists.txt \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/.qtcreator/cmake-helper/maintenance_tool_provider.cmake \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/.qtcreator/cmake-helper/package-manager.cmake \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/.qtcreator/cmake-helper/qtcreator-project.cmake \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/CMakeFiles/3.30.5/CMakeCXXCompiler.cmake \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/CMakeFiles/3.30.5/CMakeRCCompiler.cmake \
+	D:/ScreenShare/screen-share/build/Desktop_Qt_6_11_1_MSVC2022_64bit-Debug/CMakeFiles/3.30.5/CMakeSystem.cmake \
+	D:/ScreenShare/screen-share/src/annotation/annotationoverlay.cpp \
+	D:/ScreenShare/screen-share/src/annotation/annotationoverlay.h \
+	D:/ScreenShare/screen-share/src/annotation/annotationwindow.cpp \
+	D:/ScreenShare/screen-share/src/annotation/annotationwindow.h \
+	D:/ScreenShare/screen-share/src/app/loginwindow.cpp \
+	D:/ScreenShare/screen-share/src/app/loginwindow.h \
+	D:/ScreenShare/screen-share/src/app/mainwindow.cpp \
+	D:/ScreenShare/screen-share/src/app/mainwindow.h \
+	D:/ScreenShare/screen-share/src/app/receiverwindow.cpp \
+	D:/ScreenShare/screen-share/src/app/receiverwindow.h \
+	D:/ScreenShare/screen-share/src/app/senderwindow.cpp \
+	D:/ScreenShare/screen-share/src/app/senderwindow.h \
+	D:/ScreenShare/screen-share/src/app/sharetoolbar.cpp \
+	D:/ScreenShare/screen-share/src/app/sharetoolbar.h \
+	D:/ScreenShare/screen-share/src/audio/audiocapturer.cpp \
+	D:/ScreenShare/screen-share/src/audio/audiocapturer.h \
+	D:/ScreenShare/screen-share/src/audio/audiomixer.cpp \
+	D:/ScreenShare/screen-share/src/audio/audiomixer.h \
+	D:/ScreenShare/screen-share/src/audio/audioplayer.cpp \
+	D:/ScreenShare/screen-share/src/audio/audioplayer.h \
+	D:/ScreenShare/screen-share/src/audio/systemaudiocapturer.cpp \
+	D:/ScreenShare/screen-share/src/audio/systemaudiocapturer.h \
+	D:/ScreenShare/screen-share/src/capture/screencapturer.cpp \
+	D:/ScreenShare/screen-share/src/capture/screencapturer.h \
+	D:/ScreenShare/screen-share/src/capture/sourceenumerator.cpp \
+	D:/ScreenShare/screen-share/src/capture/sourceenumerator.h \
+	D:/ScreenShare/screen-share/src/main.cpp \
+	D:/ScreenShare/screen-share/src/media/cameramanager.cpp \
+	D:/ScreenShare/screen-share/src/media/cameramanager.h \
+	D:/ScreenShare/screen-share/src/media/mediareceiver.cpp \
+	D:/ScreenShare/screen-share/src/media/mediareceiver.h \
+	D:/ScreenShare/screen-share/src/media/sender.cpp \
+	D:/ScreenShare/screen-share/src/media/sender.h \
+	D:/ScreenShare/screen-share/src/media/videodecodeworker.cpp \
+	D:/ScreenShare/screen-share/src/media/videodecodeworker.h \
+	D:/ScreenShare/screen-share/src/media/videoencodeworker.cpp \
+	D:/ScreenShare/screen-share/src/media/videoencodeworker.h \
+	D:/ScreenShare/screen-share/src/network/networktransport.cpp \
+	D:/ScreenShare/screen-share/src/network/networktransport.h \
+	D:/ScreenShare/screen-share/src/platform/windows/wgc/wgcwindowcapturebackend.cpp \
+	D:/ScreenShare/screen-share/src/platform/windows/wgc/wgcwindowcapturebackend.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/WTypesbase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/apiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/apisetcconv.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/basetsd.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/driverspecs.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/dxgi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/dxgi1_2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/dxgicommon.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/dxgiformat.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/dxgitype.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/guiddef.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/kernelspecs.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/ks.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/ksmedia.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/ktmtypes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/minwindef.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/mmreg.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/no_sal2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/poppack.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/pshpack1.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/pshpack2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/pshpack4.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/pshpack8.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcasync.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcdce.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcdcep.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcndr.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcnterr.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/rpcsal.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/sdkddkver.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/sdv_driverspecs.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/specstrings.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/specstrings_strict.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/stralign.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/tvout.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/winapifamily.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/windef.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/winerror.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/winpackagefamily.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/wnnc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/shared/wtypes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/assert.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_malloc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_memcpy_s.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_memory.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_search.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_stdio_config.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_wctype.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_wstdio.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_wstdlib.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/corecrt_wstring.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/crtdbg.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/ctype.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/errno.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/stddef.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/stdio.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/stdlib.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/ucrt/string.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/AudioSessionTypes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/Audioclient.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/PropIdl.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/PropIdlBase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/StructuredQueryCondition.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/Unknwn.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/Unknwnbase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/WinBase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/WinNls.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/WinUser.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/Windows.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/apiquery2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/avrt.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/cguid.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/combaseapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/coml2api.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/consoleapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/consoleapi2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/consoleapi3.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10_1.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10_1shader.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10effect.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10misc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10sdklayers.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d10shader.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d11.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3d11sdklayers.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/d3dcommon.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/datetimeapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/debugapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/enclaveapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/errhandlingapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/fibersapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/fileapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/fileapifromapp.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/handleapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/heapapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/ime_cmodes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/imm.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/interlockedapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/ioapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/jobapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/jobapi2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/libloaderapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/mcx.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/memoryapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/minwinbase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/mmdeviceapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/msxml.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/namedpipeapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/namespaceapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/oaidl.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/objbase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/objidl.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/objidlbase.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/ocidl.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/ole2.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/oleauto.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/oleidl.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/processenv.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/processthreadsapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/processtopologyapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/profileapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/propkeydef.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/propsys.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/realtimeapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/reason.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/rpcnsi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/rpcnsip.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/securityappcontainer.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/securitybaseapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/servprov.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/shtypes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/stringapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/synchapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/sysinfoapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/systemtopologyapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/threadpoolapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/threadpoollegacyapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/timezoneapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/urlmon.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/utilapiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/verrsrc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/wincon.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/wincontypes.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/wingdi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/winnetwk.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/winnt.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/winreg.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/winsvc.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/winver.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/um/wow64apiset.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/WeakReference.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/activation.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/hstring.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/inspectable.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/roapi.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/wrl/client.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/wrl/def.h \
+	D:/Windows\ Kits/10/Include/10.0.26100.0/winrt/wrl/internal.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/algorithm \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/array \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/atomic \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cassert \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/chrono \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/climits \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cmath \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/concurrencysal.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cstddef \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cstdint \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cstdlib \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/cstring \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/excpt.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/functional \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/future \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/initializer_list \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/iterator \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/limits \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/limits.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/list \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/map \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/memory \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/new \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/numeric \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/optional \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/sal.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/set \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/stdarg.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/stdbool.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/string \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/string_view \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/tuple \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/type_traits \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/unordered_map \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/unordered_set \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/utility \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vadefs.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/variant \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vcruntime.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vcruntime_new.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vcruntime_new_debug.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vcruntime_string.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/vector \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/version \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/yvals.h \
+	D:/visual\ studio/VC/Tools/MSVC/14.51.36231/include/yvals_core.h \
+	D:/ScreenShare/screen-share/src/app/loginwindow.ui \
+	D:/ScreenShare/screen-share/src/app/mainwindow.ui \
+	D:/ScreenShare/screen-share/src/app/receiverwindow.ui \
+	D:/ScreenShare/screen-share/src/app/senderwindow.ui \
+	D:/QT/Tools/CMake_64/bin/cmake.exe
