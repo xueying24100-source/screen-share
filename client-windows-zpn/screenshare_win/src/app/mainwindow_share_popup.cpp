@@ -157,7 +157,7 @@ void MainWindow::refreshSharePopupOptions()
         return;
     }
 
-    const QList<QScreen*> screens = ScreenCapturer::screens();
+    const QList<QScreen*> screens = QGuiApplication::screens();
     if (btnDesktop1) {
         btnDesktop1->setIcon(makeScreenThumbnailIcon(0));
         btnDesktop1->setIconSize(QSize(132, 74));
@@ -220,7 +220,7 @@ void MainWindow::refreshSharePopupOptions()
     if (windowGroupLabel) {
 #ifdef Q_OS_WIN
         windowGroupLabel->setText(count > 0
-                                      ? QStringLiteral("已打开的窗口 / 最小化窗口")
+                                      ? QStringLiteral("已打开的窗口")
                                       : QStringLiteral("未检测到可共享窗口"));
 #else
         windowGroupLabel->setText(QStringLiteral("窗口列表：当前平台暂未实现自动枚举"));
@@ -284,7 +284,7 @@ QIcon MainWindow::makeScreenThumbnailIcon(int screenIndex) const
     canvas.fill(Qt::transparent);
 
     QPixmap desktopPixmap;
-    const QList<QScreen*> screens = ScreenCapturer::screens();
+    const QList<QScreen*> screens = QGuiApplication::screens();
     if (screenIndex >= 0 && screenIndex < screens.size()) {
         QImage screenImage = ScreenCapturer::captureScreenOnce(screenIndex, iconSize);
         if (!screenImage.isNull()) {
@@ -319,46 +319,6 @@ QIcon MainWindow::makeScreenThumbnailIcon(int screenIndex) const
     painter.drawRoundedRect(canvas.rect().adjusted(0, 0, -1, -1), 8, 8);
 
     return QIcon(canvas);
-}
-
-QPixmap MainWindow::captureVisibleWindowPixmap(quintptr windowHandle) const
-{
-    if (windowHandle == 0) {
-        return QPixmap();
-    }
-
-#ifdef Q_OS_WIN
-    HWND hwnd = reinterpret_cast<HWND>(windowHandle);
-    if (!IsWindow(hwnd) || IsIconic(hwnd)) {
-        return QPixmap();
-    }
-
-    RECT rect{};
-    if (!GetWindowRect(hwnd, &rect)) {
-        return QPixmap();
-    }
-    const int width = rect.right - rect.left;
-    const int height = rect.bottom - rect.top;
-    if (width <= 0 || height <= 0) {
-        return QPixmap();
-    }
-
-    QPoint center((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
-    QScreen *targetScreen = QGuiApplication::screenAt(center);
-    if (!targetScreen) {
-        targetScreen = QGuiApplication::primaryScreen();
-    }
-    if (!targetScreen) {
-        return QPixmap();
-    }
-
-    // 抓“屏幕上实时可见的窗口区域”。对于 Chrome / Qt Creator / 飞书等硬件加速窗口，
-    // PrintWindow 可能只返回初始化帧；屏幕裁剪虽然要求目标窗口可见，但实时性最好。
-    return targetScreen->grabWindow(0, rect.left, rect.top, width, height);
-#else
-    Q_UNUSED(windowHandle);
-    return QPixmap();
-#endif
 }
 
 QIcon MainWindow::makeWindowThumbnailIcon(quintptr windowHandle, bool minimized) const

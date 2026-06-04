@@ -16,16 +16,11 @@ class QScreen;
 class ScreenCapturer
 {
 public:
-    // Screen enumeration
-    static QList<QScreen*> screens();
-    static QScreen* primaryScreen();
-    static int screenCount();
-
     // One-shot capture methods
     // Capture screen by index, prefers DXGI on Windows
     static QImage captureScreenOnce(int screenIndex, const QSize& outputSize = QSize());
 
-    // Capture window by handle, prefers PrintWindow/BitBlt on Windows
+    // Capture window by handle, prefers WGC/PrintWindow/BitBlt on Windows
     static QImage captureWindowOnce(quintptr windowId, const QSize& outputSize = QSize());
 
     // Utility
@@ -35,6 +30,9 @@ public:
 private:
     // DXGI screen capture
     static QImage captureScreenWithDXGI(int screenIndex, const QSize& outputSize);
+
+    // WGC window capture (Windows Graphics Capture - hardware accelerated)
+    static QImage captureWindowWithWGC(HWND hwnd, const QSize& outputSize);
 
     // GDI window capture methods
     static QImage captureWindowWithPrintWindow(HWND hwnd, int width, int height);

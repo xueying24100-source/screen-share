@@ -173,7 +173,7 @@ void MainWindow::startShareWindow(quintptr windowHandle, const QString &windowTi
     // 窗口共享优先保证“实时看到的内容”。Chrome / Qt Creator / 飞书这类硬件加速窗口
     // 用 PrintWindow 容易停在初始帧，所以选择窗口后把目标窗口恢复并短暂置前，
     // 后续抓取会优先尝试屏幕实时裁剪。
-    if (IsIconic(hwnd)) {
+    if ((hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
     }
     SetForegroundWindow(hwnd);
@@ -252,7 +252,7 @@ void MainWindow::captureScreen()
     QPixmap pixmap;
 
     if (currentShareType == ShareSourceType::Screen) {
-        const QList<QScreen*> screens = ScreenCapturer::screens();
+        const QList<QScreen*> screens = QGuiApplication::screens();
         if (currentScreenIndex < 0 || currentScreenIndex >= screens.size()) {
             ui->labelStatus->setText("状态：扩展屏已断开");
             return;
@@ -287,8 +287,8 @@ void MainWindow::captureScreen()
         return;
     }
 
-    pixmap = composeCursorOnPixmap(pixmap);
-    pixmap = composeAnnotationOnPixmap(pixmap);
+    pixmap = composeCursorOnPixmap(pixmap);//叠加鼠标指针
+    pixmap = composeAnnotationOnPixmap(pixmap);//叠加画笔标注
 
     ui->labelMainScreen->setStyleSheet("");
     updatePreviewWithPixmap(pixmap);

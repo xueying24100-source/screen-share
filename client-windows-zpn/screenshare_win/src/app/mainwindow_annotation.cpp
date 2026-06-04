@@ -46,7 +46,7 @@ void MainWindow::showAnnotationWindow()
         if (currentShareType == ShareSourceType::Whiteboard) {
             updateWhiteboardPreview();
         } else {
-            captureScreen();
+            updateWhiteboardPreview();
         }
         if (sharing) {
             ui->labelStatus->setText("状态：正在共享 " + currentShareSource + "，画笔已关闭");
